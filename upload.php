@@ -12,8 +12,8 @@ if (!is_dir($dir)) {
   mkdir($dir, 0777, true);
 }
 $name = $_FILES["fileToUpload"]["name"];
-$size = $_FILES["fileToUpload"]["size"];
-$t_name = $_FILES["fileToUpload"]["tmp_name"];
+// $size = $_FILES["fileToUpload"]["size"];
+// $t_name = $_FILES["fileToUpload"]["tmp_name"];
 
 if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $dir.$name)) {
   echo 'Successfully uploaded.<br><a href="'.$dir.'">Go to File\'s Directory</a><br>';
