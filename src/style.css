@@ -1,0 +1,39 @@
+div.uploadBox{
+  width: 95%;
+  margin: auto;
+  border-style: solid;
+  box-sizing: border-box;
+  padding: 8px;
+}
+
+input#customDir{
+  width: 40%;
+}
+
+@media only screen and (max-width: 768px)
+{
+  div.uploadBox{
+    width: 65%;
+  }
+
+  input#customDir{
+    width: 100%;
+  }
+}
+
+form.upload input[type="file"]{
+  width: 100%;
+}
+
+form.upload label{
+  box-sizing: border-box;
+  width: 100%;
+  border-style: solid;
+  border-width: 1px;
+  border-color: black;
+}
+
+form.upload label:hover{
+  background-color: #00b80f;
+  color: white;
+}
