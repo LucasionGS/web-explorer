@@ -10,7 +10,7 @@ $dirSections = explode("/", $dir);
 
 $files = [];
 if (is_dir($dir)) {
-  $files = array_slice(scandir($dir), 1);
+  $files = array_slice(scandir($dir), $_DIR != "" ? 1 : 2);
 }
 else if (is_file($dir)) {
   $dirSections[0] = "download";
@@ -50,16 +50,23 @@ class DirectoryEntry extends Entry implements InteractableEntry
   }
 
   public function createElement() {
+    global $filePath;
     $parts = explode("/", $this->path);
     $name = array_slice($parts, -1, 1)[0];
-    $path = "/explorer/" . implode("/", array_slice($parts, 1));
+    $realPath = "/" . implode("/", array_slice($parts, 1));
+    $path = "/explorer" . $realPath;
     $icon = $this->icon;
     $data = "
     <a class=\"entrylink\" href=\"$path\">
-      <div title=\"Click to open\" class=\"entry\">
+      <div title=\"Click to open\" class=\"entry directoryentry\">
         <img src=\"$icon\" class=\"entryicon\">
         <div class=\"entryname\">
           <p>$name</p>
+        </div>
+        <div class=\"actions\">
+          <a onclick=\"if (confirm('Are you sure you want to delete $name?')) ''; else event.preventDefault();\" href=\"/operators/delete.php?target=$realPath\">
+            <div class=\"actionbutton\">Delete</div>
+          </a>
         </div>
       </div>
     </a>";
@@ -74,18 +81,25 @@ class FileEntry extends Entry implements InteractableEntry
   }
 
   public function createElement() {
+    global $filePath, $entries;
     $parts = explode("/", $this->path);
     $name = array_slice($parts, -1, 1)[0];
-    $path = "/explorer/" . implode("/", array_slice($parts, 1));
+    $realPath = "/" . implode("/", array_slice($parts, 1));
+    $path = "/explorer" . $realPath;
     $icon = $this->icon;
     $data = "
     <a class=\"entrylink\" href=\"$path\">
-      <div title=\"Click to download\" class=\"entry\">
+      <div title=\"Click to download\" class=\"entry fileentry\">
         <img src=\"$icon\" class=\"entryicon\">
         <div class=\"entryname\">
           <p>$name</p>
         </div>
-        ". (substr(mime_content_type($this->path), 0, 5) == "image" ? "<img class=\"previewimage\" src=\"$path\">" : "") ."
+        <div class=\"actions\">
+          <a onclick=\"if (confirm('Are you sure you want to delete $name?')) ''; else event.preventDefault();\" href=\"/operators/delete.php?target=$realPath\">
+            <div class=\"actionbutton\">Delete</div>
+          </a>
+        </div>
+        ". ((count($entries) < 100 || $_GET["previewall"] == 1) && substr(mime_content_type($this->path), 0, 5) == "image" ? "<img class=\"previewimage\" src=\"$path\">" : "") ."
       </div>
     </a>";
     return $data;
@@ -131,12 +145,11 @@ for ($i=0; $i < count($files); $i++) {
       ?>
     </div>
     <div id="uploadfile">
-      <!-- <div id="dropzone">Upload to this folder...</div> -->
       <div class="uploadBox">
         <input type="text" id="customDir" onkeydown="if(event.keyCode == '13') {event.preventDefault(); addCustomDir();}"><button onclick="addCustomDir()">Add Directory</button>
         <form class="upload" method="POST" action="/upload.php" enctype="multipart/form-data">
           <input type="file" name="fileToUpload" id="fileSelector" hidden>
-          <select name="dir" id="directory" style="min-width: 64px;">
+          <select name="dir" id="directory" style="max-width: 100%;">
             <option value="/">/</option>
             <?php
             function getDirContents($dir, &$results = array()){

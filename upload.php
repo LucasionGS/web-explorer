@@ -22,7 +22,7 @@ if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $dir.$name)) {
     $gotoDir = substr($gotoDir, 0, -1);
   }
   // echo '<a href="./?path='.$gotoDir.'">Go to Upload page</a><br>';
-  $header = "Location: /explorer" . $_POST["dir"];
+  $header = "Location: /explorer/" . $_POST["dir"];
   // echo $header;
   header($header);
 }

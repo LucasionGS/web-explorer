@@ -23,6 +23,11 @@ div#filecontainer {
   box-sizing: border-box;
   padding: 8px;
   overflow-y: auto;
+  overflow-x: hidden;
+}
+
+div.entry:hover {
+  position: relative;
 }
 
 div.entry:hover {
@@ -45,6 +50,7 @@ div.entryname {
   display: inline-block;
   font-size: 16px;
   color: white;
+  width: 80%;
 }
 
 a.entrylink {
@@ -67,4 +73,51 @@ img.previewimage {
 div#dropzone {
   width: fit-content;
   margin: auto;
+}
+
+/* Higher res, usually PCs */
+@media only screen and (min-width: 768px) {
+  div.actions {
+    display: none;
+    height: 100%;
+    position: absolute;
+    right: 0;
+    top: 0;
+    background-color: #2b2b2b;
+    border-left-style: solid;
+    border-width: 1px;
+  }
+}
+
+/* Lower res, usually phones */
+@media only screen and (max-width: 767px) {
+  div.actions {
+    display: flex;
+    width: 20%;
+    height: 100%;
+  }
+}
+
+div.entry:hover div.actions {
+  display: flex;
+}
+
+div.actions a {
+  color: white;
+}
+
+div.actionbutton {
+  /* width: 24px; */
+  height: 24px;
+  margin: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+div.actionbutton:hover {
+  transform: translateY(-2px);
+}
+
+div.actionbutton > img {
+  width: 100%;
+  height: 100%;
 }
