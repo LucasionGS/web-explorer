@@ -64,10 +64,18 @@ img.entryicon {
   height: 16px;
 }
 
-img.previewimage {
+.previewimage {
   display: block;
   max-width: 50%;
   max-height: 25vh;
+}
+
+img.previewimage {
+  transition: transform 0.2s ease-in-out;
+}
+
+img.previewimage:hover {
+  transform: translateY(-2px);
 }
 
 div#dropzone {

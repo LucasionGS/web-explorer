@@ -25,8 +25,44 @@ else {
   return header("Location: $path");
 }
 
+$icons = [
+  "." =>    "/src/icons/unknown.png",
+
+  // Media
+  "avi" =>  "/src/icons/avi.png",
+  "wav" =>  "/src/icons/wav.png",
+  "jpg" =>  "/src/icons/jpg.png",
+  "jpeg" =>  "/src/icons/jpg.png",
+  "png" =>  "/src/icons/png.png",
+  "psd" =>  "/src/icons/psd.png",
+  "mov" =>  "/src/icons/mov.png",
+  "mp3" =>  "/src/icons/mp3.png",
+
+  // Coding
+  "css" =>  "/src/icons/css.png",
+  "dll" =>  "/src/icons/dll.png",
+  
+  // HTML
+  "htm" =>  "/src/icons/htm.png",
+  "html" => "/src/icons/html.png",
+  
+  // Compressed
+  "zip" =>  "/src/icons/zip.png",
+  
+  // Other
+  "eps" =>  "/src/icons/eps.png",
+  "doc" =>  "/src/icons/doc.png",
+  "pdf" =>  "/src/icons/pdf.png",
+  "ppt" =>  "/src/icons/ppt.png",
+  "txt" =>  "/src/icons/txt.png",
+  "xls" =>  "/src/icons/xls.png",
+];
+
 class Entry
 {
+  // Folder == 0
+  // File   == 1
+  public $type = 0;
   public $path;
   public $icon = "/src/icons/unknown.png";
   public function __construct(string $path) {
@@ -47,6 +83,7 @@ class DirectoryEntry extends Entry implements InteractableEntry
   public function __construct(string $directoryPath) {
     $this->path = $directoryPath;
     $this->icon = "/src/icons/folder.png";
+    $this->type = 0;
   }
 
   public function createElement() {
@@ -77,7 +114,13 @@ class DirectoryEntry extends Entry implements InteractableEntry
 class FileEntry extends Entry implements InteractableEntry
 {
   public function __construct(string $filePath) {
+    global $icons;
     $this->path = $filePath;
+    $this->type = 1;
+    $ext = pathinfo($filePath)['extension'];
+    if ($icons[$ext] != null) {
+      $this->icon = $icons[$ext];
+    }
   }
 
   public function createElement() {
@@ -87,9 +130,19 @@ class FileEntry extends Entry implements InteractableEntry
     $realPath = "/" . implode("/", array_slice($parts, 1));
     $path = "/explorer" . $realPath;
     $icon = $this->icon;
+    $preview = "";
+    $mimeType = mime_content_type($this->path);
+    if ($_COOKIE["previewmedia"] == "1" && !($_COOKIE["limitpreviewunder100"] == "1" && count($entries) >= 100)) {
+      if (substr($mimeType, 0, strlen("image")) == "image") {
+        $preview = "<img class=\"previewimage\" src=\"$path\">";
+      }
+      if (substr($mimeType, 0, strlen("video")) == "video") {
+        $preview = "<video class=\"previewimage\" controls><source src=\"$path\"></video>";
+      }
+    }
     $data = "
     <a class=\"entrylink\" href=\"$path\">
-      <div title=\"Click to download\" class=\"entry fileentry\">
+      <div title=\"Click to download\" class=\"entry fileentry\" mime=\"$mimeType\">
         <img src=\"$icon\" class=\"entryicon\">
         <div class=\"entryname\">
           <p>$name</p>
@@ -99,7 +152,7 @@ class FileEntry extends Entry implements InteractableEntry
             <div class=\"actionbutton\">Delete</div>
           </a>
         </div>
-        ". ((count($entries) < 100 || $_GET["previewall"] == 1) && substr(mime_content_type($this->path), 0, 5) == "image" ? "<img class=\"previewimage\" src=\"$path\">" : "") ."
+        ". $preview ."
       </div>
     </a>";
     return $data;
@@ -110,15 +163,30 @@ class FileEntry extends Entry implements InteractableEntry
  * @var (DirectoryEntry|FileEntry)[]
  */
 $entries = [];
-
-for ($i=0; $i < count($files); $i++) { 
-  $file =  $dir . "/" .$files[$i];
+for ($i= ($files[0] == ".." ? 1 : 0); $i < count($files); $i++) {
+  if ($files[$i] == ".") continue;
+  $file = $dir . "/" .$files[$i];
   if (is_dir($file)) {
     array_push($entries, new DirectoryEntry($file));
   }
   else if (is_file($file)) {
     array_push($entries, new FileEntry($file));
   }
+}
+$total = $files[0] == ".." ? count($files) - 1 : count($files);
+
+usort($entries, function($a, $b) {
+  return strtolower($a->path) > strtolower($b->path);
+});
+
+usort($entries, function($a, $b) {
+  return $a->type > $b->type;
+});
+
+if ($files[0] == "..") {
+  array_unshift($entries, new DirectoryEntry(
+    $dir . "/" .$files[0]
+  ));
 }
 ?>
 
@@ -136,6 +204,9 @@ for ($i=0; $i < count($files); $i++) {
 <body>
   <div class="centercontainer">
     <div id="filecontainer">
+      <div>
+        <p>Found <?php echo $total; ?> files</p>
+      </div>
       <?php
       for ($i=0; $i < count($entries); $i++) {
         $entry = $entries[$i];
@@ -152,7 +223,7 @@ for ($i=0; $i < count($files); $i++) {
           <select name="dir" id="directory" style="max-width: 100%;">
             <option value="/">/</option>
             <?php
-            function getDirContents($dir, &$results = array()){
+            function getDirContents($dir, &$results = array()) {
               $files = scandir($dir);
               foreach($files as $key => $value){
                 $path = ($dir.DIRECTORY_SEPARATOR.$value);
@@ -176,6 +247,17 @@ for ($i=0; $i < count($files); $i++) {
           <br><br>
           <input onclick="upload(event)" type="submit" value="Upload" style="width:64px; height: 32px;">
         </form>
+      </div>
+      <div style="margin: 20px;">
+        <input type="checkbox" id="previewmedia" <?php echo $_COOKIE["previewmedia"] == "1" ? "checked" : ""; ?>
+        onclick="setCookie('previewmedia', Number(this.checked), true)">
+        <label for="previewmedia">Preview Media</label>
+        <br>
+        <input type="checkbox" id="limitpreviewunder100"
+        <?php echo $_COOKIE["limitpreviewunder100"] == "1" ? "checked" : ""; ?>
+        <?php echo $_COOKIE["previewmedia"] == "1" ? "" : "disabled"; ?>
+        onclick="setCookie('limitpreviewunder100', Number(this.checked), true)">
+        <label for="limitpreviewunder100">Limit Preview to under 100 files</label>
       </div>
       <script>
       <?php if(isset($_GET["dir"]) && $_GET["dir"] != "/") {

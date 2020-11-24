@@ -85,7 +85,9 @@ var FileEntry = /** @class */ (function (_super) {
     }
     return FileEntry;
 }(Entry));
-function rename(path) {
+function setCookie(name, value, reloadOnResponse) {
+    if (reloadOnResponse === void 0) { reloadOnResponse = false; }
+    fetch("/cookie.php?" + name + "=" + value).then(function (res) { return location.reload(); });
 }
 // window.addEventListener("load", () => {
 //   let directoryEntryElements = document.querySelectorAll<HTMLDivElement>(".directoryentry");

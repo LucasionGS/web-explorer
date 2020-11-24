@@ -79,8 +79,8 @@ class FileEntry extends Entry
   }
 }
 
-function rename(path: string) {
-
+function setCookie(name: string, value: any, reloadOnResponse = false) {
+  fetch("/cookie.php?" + name + "=" + value).then(res => location.reload());
 }
 
 // window.addEventListener("load", () => {
