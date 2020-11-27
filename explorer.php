@@ -9,6 +9,27 @@ $dir = trim($dir, "/");
 $dirSections = explode("/", $dir);
 
 $files = [];
+
+function encodeFullUrl(string $url) {
+  $fileParts = explode("/", $url);
+  for ($i2=0; $i2 < count($fileParts); $i2++) {
+    $fileParts[$i2] = rawurlencode($fileParts[$i2]);
+  }
+
+  $url = implode("/", $fileParts);
+  return $url;
+}
+
+function decodeFullUrl(string $url) {
+  $fileParts = explode("/", $url);
+  for ($i2=0; $i2 < count($fileParts); $i2++) {
+    $fileParts[$i2] = rawurldecode($fileParts[$i2]);
+  }
+
+  $url = implode("/", $fileParts);
+  return $url;
+}
+
 if (is_dir($dir)) {
   $files = array_slice(scandir($dir), $_DIR != "" ? 1 : 2);
 }
@@ -64,9 +85,11 @@ class Entry
   // File   == 1
   public $type = 0;
   public $path;
+  public $decodedPath;
   public $icon = "/src/icons/unknown.png";
   public function __construct(string $path) {
-    $this->path = $path;
+    $this->path = encodeFullUrl($path);
+    $this->decodedPath = $path;
   }
 
   public function getFullPath() {
@@ -81,7 +104,8 @@ interface InteractableEntry {
 class DirectoryEntry extends Entry implements InteractableEntry
 {
   public function __construct(string $directoryPath) {
-    $this->path = $directoryPath;
+    $this->path = encodeFullUrl($directoryPath);
+    $this->decodedPath = $directoryPath;
     $this->icon = "/src/icons/folder.png";
     $this->type = 0;
   }
@@ -89,22 +113,30 @@ class DirectoryEntry extends Entry implements InteractableEntry
   public function createElement() {
     global $filePath;
     $parts = explode("/", $this->path);
+    $decodedParts = explode("/", $this->decodedPath);
     $name = array_slice($parts, -1, 1)[0];
+    $decodedName = array_slice($decodedParts, -1, 1)[0];
     $realPath = "/" . implode("/", array_slice($parts, 1));
+    $decodedRealPath = "/" . implode("/", array_slice($decodedParts, 1));
     $path = "/explorer" . $realPath;
     $icon = $this->icon;
     $data = "
     <a class=\"entrylink\" href=\"$path\">
-      <div title=\"Click to open\" class=\"entry directoryentry\">
+      <div title=\"Click to open\" class=\"entry directoryentry\" id=\"entry_$name\">
         <img src=\"$icon\" class=\"entryicon\">
         <div class=\"entryname\">
-          <p>$name</p>
+          <p>$decodedName</p>
         </div>
-        <div class=\"actions\">
-          <a onclick=\"if (confirm('Are you sure you want to delete $name?')) ''; else event.preventDefault();\" href=\"/operators/delete.php?target=$realPath\">
+        " . ($name != ".." ?
+        "<div class=\"actions\">
+          <a href=\"#\" onclick=\"renameModal('$decodedRealPath')\">
+            <div class=\"actionbutton\">Rename</div>
+          </a>
+          <a onclick=\"if (confirm('Are you sure you want to delete $decodedName?')) ''; else event.preventDefault();\" href=\"/operators/delete.php?target=$realPath\">
             <div class=\"actionbutton\">Delete</div>
           </a>
-        </div>
+        </div>"
+        : "") . "
       </div>
     </a>";
     return $data;
@@ -115,7 +147,8 @@ class FileEntry extends Entry implements InteractableEntry
 {
   public function __construct(string $filePath) {
     global $icons;
-    $this->path = $filePath;
+    $this->path = encodeFullUrl($filePath);
+    $this->decodedPath = $filePath;
     $this->type = 1;
     $ext = pathinfo($filePath)['extension'];
     if ($icons[$ext] != null) {
@@ -126,12 +159,15 @@ class FileEntry extends Entry implements InteractableEntry
   public function createElement() {
     global $filePath, $entries;
     $parts = explode("/", $this->path);
+    $decodedParts = explode("/", $this->decodedPath);
     $name = array_slice($parts, -1, 1)[0];
+    $decodedName = array_slice($decodedParts, -1, 1)[0];
     $realPath = "/" . implode("/", array_slice($parts, 1));
+    $decodedRealPath = "/" . implode("/", array_slice($decodedParts, 1));
     $path = "/explorer" . $realPath;
     $icon = $this->icon;
     $preview = "";
-    $mimeType = mime_content_type($this->path);
+    $mimeType = mime_content_type($this->decodedPath);
     if ($_COOKIE["previewmedia"] == "1" && !($_COOKIE["limitpreviewunder100"] == "1" && count($entries) >= 100)) {
       if (substr($mimeType, 0, strlen("image")) == "image") {
         $preview = "<img class=\"previewimage\" src=\"$path\">";
@@ -140,18 +176,31 @@ class FileEntry extends Entry implements InteractableEntry
         $preview = "<video class=\"previewimage\" controls><source src=\"$path\"></video>";
       }
     }
+    
+    $previewAction = "";
+    if (substr($mimeType, 0, strlen("image")) == "image") {
+      $previewAction = "<a href=\"#\" onclick=\"setLargePreviewImage('$path', 'image')\"><div class=\"actionbutton\">Preview</div></a>";
+    }
+    if (substr($mimeType, 0, strlen("video")) == "video") {
+      $previewAction = "<a href=\"#\" onclick=\"setLargePreviewImage('$path', 'video')\"><div class=\"actionbutton\">Preview</div></a>";
+    }
+    
     $data = "
     <a class=\"entrylink\" href=\"$path\">
-      <div title=\"Click to download\" class=\"entry fileentry\" mime=\"$mimeType\">
+      <div title=\"Click to download\" class=\"entry fileentry\" mime=\"$mimeType\" id=\"entry_$name\">
         <img src=\"$icon\" class=\"entryicon\">
         <div class=\"entryname\">
-          <p>$name</p>
+          <p>$decodedName</p>
         </div>
         <div class=\"actions\">
+          " . $previewAction . "
           <a href=\"/download/$realPath\">
             <div class=\"actionbutton\">Download</div>
           </a>
-          <a onclick=\"if (confirm('Are you sure you want to delete $name?')) ''; else event.preventDefault();\" href=\"/operators/delete.php?target=$realPath\">
+          <a href=\"#\" onclick=\"renameModal('$decodedRealPath')\">
+            <div class=\"actionbutton\">Rename</div>
+          </a>
+          <a onclick=\"if (confirm('Are you sure you want to delete $decodedName?')) ''; else event.preventDefault();\" href=\"/operators/delete.php?target=$realPath\">
             <div class=\"actionbutton\">Delete</div>
           </a>
         </div>
@@ -166,7 +215,7 @@ class FileEntry extends Entry implements InteractableEntry
  * @var (DirectoryEntry|FileEntry)[]
  */
 $entries = [];
-for ($i= ($files[0] == ".." ? 1 : 0); $i < count($files); $i++) {
+for ($i = ($files[0] == ".." ? 1 : 0); $i < count($files); $i++) {
   if ($files[$i] == ".") continue;
   $file = $dir . "/" .$files[$i];
   if (is_dir($file)) {
@@ -209,10 +258,20 @@ if ($files[0] == "..") {
     <div id="filecontainer">
       <div>
         <div id="folderactions">
-          <a class="actionbutton" href="/operators/mkdir?target=" for="newfolderaction">New Folder</a>
-          <div class="actionfields" id="newfolderaction"></div>
+          <a class="actionbutton" href="#mkdir" for="newfolderaction" onclick="folderActionButtonHandler(this)">New Folder</a>
+          <div class="actionfields" id="newfolderaction" hidden>
+            <form action="/operators/mkdir">
+              <input type="hidden" name="target" value="<?php echo $_DIR; ?>" required>
+              <input placeholder="New Folder Name..." type="text" name="name" value="New Folder" required autocomplete="off" focusonclick>
+              <input type="submit" value="Create folder">
+            </form>
+          </div>
         </div>
-        <p>Found <?php echo $total; ?> files</p>
+        <p>
+          <?php echo "/" . $_DIR; ?>
+          <br>
+          Found <?php echo $total; ?> files
+        </p>
       </div>
       <?php
       for ($i=0; $i < count($entries); $i++) {
@@ -223,11 +282,18 @@ if ($files[0] == "..") {
       ?>
     </div>
     <div id="uploadfile">
+      <div style="width: 100%; display: flex; justify-content: center;">
+        <img id="largeimagepreview" hidden style="max-width: 100%;">
+        <video style="width: 100%;" id="largevideopreviewelement" controls hidden>
+          <source id="largevideopreview" hidden>
+        </video>
+      </div>
       <div class="uploadBox">
-        <input type="text" id="customDir" onkeydown="if(event.keyCode == '13') {event.preventDefault(); addCustomDir();}"><button onclick="addCustomDir()">Add Directory</button>
+        <input type="text" id="customDir" onkeydown="if(event.keyCode == '13') {event.preventDefault(); addCustomDir();}" hidden>
+        <button onclick="addCustomDir()" hidden>Add Directory</button>
         <form class="upload" id="fileuploadform" method="POST" action="/upload.php" enctype="multipart/form-data">
           <input type="file" name="fileToUpload[]" id="fileSelector" hidden multiple>
-          <select name="dir" id="directory" style="max-width: 100%;">
+          <select name="dir" id="directory" style="max-width: 100%;" hidden>
             <option value="/">/</option>
             <?php
             function getDirContents($dir, &$results = array()) {
@@ -253,11 +319,13 @@ if ($files[0] == "..") {
           <label id="curFile" onclick="document.querySelector('#fileSelector').click();">Click here to choose a file.</label>
           <div id="dropzone" onclick="document.querySelector('#fileSelector').click();">
             <p style="text-align: center; padding-top: calc(128px - 1em); padding-bottom: 128px;">
+              Upload
+              <br>
               Drag files here or click to select
             </p>
           </div>
           <br><br>
-          <input onclick="upload(event)" id="uploadbutton" type="submit" value="Upload" style="width:64px; height: 32px;">
+          <input onclick="upload(event)" id="uploadbutton" type="submit" value="Upload" style="width:64px; height: 32px;" hidden>
         </form>
       </div>
       <div style="margin: 20px;">
