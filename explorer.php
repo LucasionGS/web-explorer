@@ -201,7 +201,6 @@ if ($files[0] == "..") {
   <title>File Manager<?php echo " | /" . $_DIR; ?></title>
   <link rel="stylesheet" href="/src/explorer.css">
   <link rel="stylesheet" href="/src/style.css">
-  <script src="/src/dropzone-5.7.0/dist/min/dropzone.min.js"></script>
   <script src="/src/autocomplete.js"></script>
   <script async src="/src/handler.js"></script>
 </head>

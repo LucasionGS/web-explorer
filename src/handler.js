@@ -101,14 +101,14 @@ function setCookie(name, value, reloadOnResponse) {
 window.addEventListener("load", function () {
     // let directoryEntryElements = document.querySelectorAll<HTMLDivElement>(".directoryentry");
     var d = document.querySelector("#dropzone");
-    d.addEventListener('dragenter', function () { }, false);
-    d.addEventListener('dragleave', function () { }, false);
-    d.addEventListener('dragover', function (event) {
+    window.addEventListener('dragenter', function () { }, false);
+    window.addEventListener('dragleave', function () { }, false);
+    window.addEventListener('dragover', function (event) {
         event.stopPropagation();
         1;
         event.preventDefault();
     }, false);
-    d.addEventListener("drop", function (e) {
+    window.addEventListener("drop", function (e) {
         e.preventDefault();
         document.querySelector("#fileSelector").files = e.dataTransfer.files;
         document.querySelector("#curFile").innerText = fileListToArray(e.dataTransfer.files).map(function (file) { return Path.getFile(file.name); }).join(", ");

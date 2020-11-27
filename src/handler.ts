@@ -98,14 +98,14 @@ window.addEventListener("load", () => {
 
   let d = document.querySelector<HTMLDivElement>("#dropzone");
 
-  d.addEventListener('dragenter', function (){}, false);
-  d.addEventListener('dragleave', function (){}, false);
-  d.addEventListener('dragover', function (event) {
+  window.addEventListener('dragenter', function (){}, false);
+  window.addEventListener('dragleave', function (){}, false);
+  window.addEventListener('dragover', function (event) {
     event.stopPropagation();1
     event.preventDefault();
   }, false);
 
-  d.addEventListener("drop", e => {
+  window.addEventListener("drop", e => {
     e.preventDefault();
     document.querySelector<HTMLInputElement>("#fileSelector").files = e.dataTransfer.files;
     document.querySelector<HTMLElement>("#curFile").innerText = fileListToArray(e.dataTransfer.files).map(file => Path.getFile(file.name)).join(", ");
