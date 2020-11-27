@@ -79,8 +79,26 @@ img.previewimage:hover {
 }
 
 div#dropzone {
-  width: fit-content;
+  width: 80%;
   margin: auto;
+  outline-style: dotted;
+  height: 256px;
+  background-color: rgb(75, 75, 75);
+  opacity: 0.75;
+}
+
+div#dropzone:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
+div#dropzone:active {
+  outline-color: var(--txtcolor);
+  cursor: pointer;
+}
+
+label#curFile {
+  display: block;
 }
 
 /* Higher res, usually PCs */
@@ -103,6 +121,10 @@ div#dropzone {
     display: flex;
     width: 20%;
     height: 100%;
+  }
+
+  div#dropzone {
+    display: none;
   }
 }
 

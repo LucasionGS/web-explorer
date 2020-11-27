@@ -3,12 +3,23 @@ var ac: any;
 document.querySelector<HTMLInputElement>("#fileSelector").addEventListener("change", function(e) {
   var object = e.target as HTMLInputElement;
   if (object.value != "") {
-    document.querySelector<HTMLElement>("#curFile").innerText = Path.getFile(object.value);
+    document.querySelector<HTMLElement>("#curFile").innerText = fileListToArray(object.files).map(file => Path.getFile(file.name)).join(", ");
+    document.querySelector<HTMLFormElement>("#fileuploadform").submit();
   }
   else {
     document.querySelector<HTMLElement>("#curFile").innerText = "No file selected";
   }
 });
+
+function fileListToArray(list: FileList) {
+  const arr: File[] = [];
+  for (let i = 0; i < list.length; i++) {
+    const file = list[i];
+    arr.push(file);
+  }
+
+  return arr;
+}
 
 function upload(e) {
   if (document.querySelector<HTMLInputElement>("#fileSelector").value == "") {
@@ -59,7 +70,6 @@ class Path
 class Entry
 {
   path: string;
-
   constructor(public element: HTMLDivElement) {
     
   }
@@ -83,6 +93,26 @@ function setCookie(name: string, value: any, reloadOnResponse = false) {
   fetch("/cookie.php?" + name + "=" + value).then(res => location.reload());
 }
 
-// window.addEventListener("load", () => {
-//   let directoryEntryElements = document.querySelectorAll<HTMLDivElement>(".directoryentry");
-// });
+window.addEventListener("load", () => {
+  // let directoryEntryElements = document.querySelectorAll<HTMLDivElement>(".directoryentry");
+
+  let d = document.querySelector<HTMLDivElement>("#dropzone");
+
+  d.addEventListener('dragenter', function (){}, false);
+  d.addEventListener('dragleave', function (){}, false);
+  d.addEventListener('dragover', function (event) {
+    event.stopPropagation();1
+    event.preventDefault();
+  }, false);
+
+  d.addEventListener("drop", e => {
+    e.preventDefault();
+    document.querySelector<HTMLInputElement>("#fileSelector").files = e.dataTransfer.files;
+    document.querySelector<HTMLElement>("#curFile").innerText = fileListToArray(e.dataTransfer.files).map(file => Path.getFile(file.name)).join(", ");
+    document.querySelector<HTMLFormElement>("#fileuploadform").submit();
+  }, );
+
+  d.addEventListener("click", () => {
+    document.querySelector<HTMLInputElement>("#fileSelector").click();
+  });
+});

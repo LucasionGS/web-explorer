@@ -15,12 +15,21 @@ var ac;
 document.querySelector("#fileSelector").addEventListener("change", function (e) {
     var object = e.target;
     if (object.value != "") {
-        document.querySelector("#curFile").innerText = Path.getFile(object.value);
+        document.querySelector("#curFile").innerText = fileListToArray(object.files).map(function (file) { return Path.getFile(file.name); }).join(", ");
+        document.querySelector("#fileuploadform").submit();
     }
     else {
         document.querySelector("#curFile").innerText = "No file selected";
     }
 });
+function fileListToArray(list) {
+    var arr = [];
+    for (var i = 0; i < list.length; i++) {
+        var file = list[i];
+        arr.push(file);
+    }
+    return arr;
+}
 function upload(e) {
     if (document.querySelector("#fileSelector").value == "") {
         e.preventDefault();
@@ -89,6 +98,23 @@ function setCookie(name, value, reloadOnResponse) {
     if (reloadOnResponse === void 0) { reloadOnResponse = false; }
     fetch("/cookie.php?" + name + "=" + value).then(function (res) { return location.reload(); });
 }
-// window.addEventListener("load", () => {
-//   let directoryEntryElements = document.querySelectorAll<HTMLDivElement>(".directoryentry");
-// });
+window.addEventListener("load", function () {
+    // let directoryEntryElements = document.querySelectorAll<HTMLDivElement>(".directoryentry");
+    var d = document.querySelector("#dropzone");
+    d.addEventListener('dragenter', function () { }, false);
+    d.addEventListener('dragleave', function () { }, false);
+    d.addEventListener('dragover', function (event) {
+        event.stopPropagation();
+        1;
+        event.preventDefault();
+    }, false);
+    d.addEventListener("drop", function (e) {
+        e.preventDefault();
+        document.querySelector("#fileSelector").files = e.dataTransfer.files;
+        document.querySelector("#curFile").innerText = fileListToArray(e.dataTransfer.files).map(function (file) { return Path.getFile(file.name); }).join(", ");
+        document.querySelector("#fileuploadform").submit();
+    });
+    d.addEventListener("click", function () {
+        document.querySelector("#fileSelector").click();
+    });
+});

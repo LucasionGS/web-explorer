@@ -148,6 +148,9 @@ class FileEntry extends Entry implements InteractableEntry
           <p>$name</p>
         </div>
         <div class=\"actions\">
+          <a href=\"/operators/download.php?target=$realPath\">
+            <div class=\"actionbutton\">Download</div>
+          </a>
           <a onclick=\"if (confirm('Are you sure you want to delete $name?')) ''; else event.preventDefault();\" href=\"/operators/delete.php?target=$realPath\">
             <div class=\"actionbutton\">Delete</div>
           </a>
@@ -198,8 +201,9 @@ if ($files[0] == "..") {
   <title>File Manager<?php echo " | /" . $_DIR; ?></title>
   <link rel="stylesheet" href="/src/explorer.css">
   <link rel="stylesheet" href="/src/style.css">
-  <script async src="/src/handler.js"></script>
+  <script src="/src/dropzone-5.7.0/dist/min/dropzone.min.js"></script>
   <script src="/src/autocomplete.js"></script>
+  <script async src="/src/handler.js"></script>
 </head>
 <body>
   <div class="centercontainer">
@@ -218,8 +222,8 @@ if ($files[0] == "..") {
     <div id="uploadfile">
       <div class="uploadBox">
         <input type="text" id="customDir" onkeydown="if(event.keyCode == '13') {event.preventDefault(); addCustomDir();}"><button onclick="addCustomDir()">Add Directory</button>
-        <form class="upload" method="POST" action="/upload.php" enctype="multipart/form-data">
-          <input type="file" name="fileToUpload" id="fileSelector" hidden>
+        <form class="upload" id="fileuploadform" method="POST" action="/upload.php" enctype="multipart/form-data">
+          <input type="file" name="fileToUpload[]" id="fileSelector" hidden multiple>
           <select name="dir" id="directory" style="max-width: 100%;">
             <option value="/">/</option>
             <?php
@@ -244,11 +248,17 @@ if ($files[0] == "..") {
           </select>
           <br>
           <label id="curFile" onclick="document.querySelector('#fileSelector').click();">Click here to choose a file.</label>
+          <div id="dropzone">
+          <p style="text-align: center; padding-top: calc(128px - 1em); padding-bottom: 128px;">
+            Drag files here or click to select
+          </p>
+          </div>
           <br><br>
-          <input onclick="upload(event)" type="submit" value="Upload" style="width:64px; height: 32px;">
+          <input onclick="upload(event)" id="uploadbutton" type="submit" value="Upload" style="width:64px; height: 32px;">
         </form>
       </div>
       <div style="margin: 20px;">
+        <p>(Settings are only for pc users, apparently...)</p>
         <input type="checkbox" id="previewmedia" <?php echo $_COOKIE["previewmedia"] == "1" ? "checked" : ""; ?>
         onclick="setCookie('previewmedia', Number(this.checked), true)">
         <label for="previewmedia">Preview Media</label>
