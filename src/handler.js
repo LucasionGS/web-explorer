@@ -12,16 +12,6 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 var ac;
-document.querySelector("#fileSelector").addEventListener("change", function (e) {
-    var object = e.target;
-    if (object.value != "") {
-        document.querySelector("#curFile").innerText = fileListToArray(object.files).map(function (file) { return Path.getFile(file.name); }).join(", ");
-        document.querySelector("#fileuploadform").submit();
-    }
-    else {
-        document.querySelector("#curFile").innerText = "No file selected";
-    }
-});
 function fileListToArray(list) {
     var arr = [];
     for (var i = 0; i < list.length; i++) {
@@ -31,10 +21,10 @@ function fileListToArray(list) {
     return arr;
 }
 function upload(e) {
-    if (document.querySelector("#fileSelector").value == "") {
-        e.preventDefault();
-        document.querySelector("#curFile").innerText = "Please select a file";
-    }
+    // if (document.querySelector<HTMLInputElement>("#fileSelector").value == "") {
+    //   e.preventDefault();
+    //   document.querySelector<HTMLElement>("#curFile").innerText = "Please select a file";
+    // }
 }
 function addCustomDir() {
     var customDir = document.querySelector("#customDir");
@@ -134,7 +124,6 @@ window.addEventListener("load", function () {
     window.addEventListener("drop", function (e) {
         e.preventDefault();
         document.querySelector("#fileSelector").files = e.dataTransfer.files;
-        document.querySelector("#curFile").innerText = fileListToArray(e.dataTransfer.files).map(function (file) { return Path.getFile(file.name); }).join(", ");
         document.querySelector("#fileuploadform").submit();
     });
     // let aBs = folderActions.querySelectorAll<HTMLAnchorElement>(".actionbutton");

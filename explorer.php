@@ -175,13 +175,16 @@ class FileEntry extends Entry implements InteractableEntry
       if (substr($mimeType, 0, strlen("video")) == "video") {
         $preview = "<video class=\"previewimage\" controls><source src=\"$path\"></video>";
       }
+      if (substr($mimeType, 0, strlen("audio")) == "audio") {
+        $preview = "<audio class=\"previewimage\" controls src=\"$path\"></audio>";
+      }
     }
     
     $previewAction = "";
     if (substr($mimeType, 0, strlen("image")) == "image") {
       $previewAction = "<a href=\"#\" onclick=\"setLargePreviewImage('$path', 'image')\"><div class=\"actionbutton\">Preview</div></a>";
     }
-    if (substr($mimeType, 0, strlen("video")) == "video") {
+    if (substr($mimeType, 0, strlen("video")) == "video" || substr($mimeType, 0, strlen("audio")) == "audio") {
       $previewAction = "<a href=\"#\" onclick=\"setLargePreviewImage('$path', 'video')\"><div class=\"actionbutton\">Preview</div></a>";
     }
     
@@ -288,11 +291,10 @@ if ($files[0] == "..") {
           <source id="largevideopreview" hidden>
         </video>
       </div>
+      <hr>
       <div class="uploadBox">
-        <input type="text" id="customDir" onkeydown="if(event.keyCode == '13') {event.preventDefault(); addCustomDir();}" hidden>
-        <button onclick="addCustomDir()" hidden>Add Directory</button>
         <form class="upload" id="fileuploadform" method="POST" action="/upload.php" enctype="multipart/form-data">
-          <input type="file" name="fileToUpload[]" id="fileSelector" hidden multiple>
+          <input type="file" name="fileToUpload[]" id="fileSelector" onchange="document.querySelector('#fileuploadform').submit();" hidden multiple>
           <select name="dir" id="directory" style="max-width: 100%;" hidden>
             <option value="/">/</option>
             <?php
@@ -315,21 +317,16 @@ if ($files[0] == "..") {
             }
             ?>
           </select>
-          <br>
-          <label id="curFile" onclick="document.querySelector('#fileSelector').click();">Click here to choose a file.</label>
           <div id="dropzone" onclick="document.querySelector('#fileSelector').click();">
-            <p style="text-align: center; padding-top: calc(128px - 1em); padding-bottom: 128px;">
+            <p style="text-align: center;">
               Upload
               <br>
               Drag files here or click to select
             </p>
           </div>
-          <br><br>
-          <input onclick="upload(event)" id="uploadbutton" type="submit" value="Upload" style="width:64px; height: 32px;" hidden>
         </form>
       </div>
       <div style="margin: 20px;">
-        <p>(Settings are only for pc users, apparently...)</p>
         <input type="checkbox" id="previewmedia" <?php echo $_COOKIE["previewmedia"] == "1" ? "checked" : ""; ?>
         onclick="setCookie('previewmedia', Number(this.checked), true)">
         <label for="previewmedia">Preview Media</label>
@@ -343,24 +340,7 @@ if ($files[0] == "..") {
       <script>
       <?php if(isset($_GET["dir"]) && $_GET["dir"] != "/") {
         echo "document.querySelector(\"#directory\").value = \"/".trim($_GET["dir"], "/")."\";";
-        echo "document.querySelector(\"#customDir\").value = \"/".trim($_GET["dir"], "/")."/\";";
       } ?>
-      var ac = new AutoComplete(document.querySelector("#customDir"));
-      ac.completions = [
-        <?php
-        function printFiles($files)
-        {
-          global $filesPath;
-          for ($i = 0; $i < count($files); $i++) { 
-            $file = $files[$i];
-              echo "\"".substr($file, strlen($filesPath . "/"))."\",";
-          }
-        }
-        printFiles($files);
-        ?>
-      ];
-
-      ac.caseSensitive = true;
       </script>
     </div>
   </div>

@@ -1,16 +1,5 @@
 var ac: any;
 
-document.querySelector<HTMLInputElement>("#fileSelector").addEventListener("change", function(e) {
-  var object = e.target as HTMLInputElement;
-  if (object.value != "") {
-    document.querySelector<HTMLElement>("#curFile").innerText = fileListToArray(object.files).map(file => Path.getFile(file.name)).join(", ");
-    document.querySelector<HTMLFormElement>("#fileuploadform").submit();
-  }
-  else {
-    document.querySelector<HTMLElement>("#curFile").innerText = "No file selected";
-  }
-});
-
 function fileListToArray(list: FileList) {
   const arr: File[] = [];
   for (let i = 0; i < list.length; i++) {
@@ -22,10 +11,10 @@ function fileListToArray(list: FileList) {
 }
 
 function upload(e) {
-  if (document.querySelector<HTMLInputElement>("#fileSelector").value == "") {
-    e.preventDefault();
-    document.querySelector<HTMLElement>("#curFile").innerText = "Please select a file";
-  }
+  // if (document.querySelector<HTMLInputElement>("#fileSelector").value == "") {
+  //   e.preventDefault();
+  //   document.querySelector<HTMLElement>("#curFile").innerText = "Please select a file";
+  // }
 }
 
 function addCustomDir()
@@ -134,7 +123,6 @@ window.addEventListener("load", () => {
   window.addEventListener("drop", e => {
     e.preventDefault();
     document.querySelector<HTMLInputElement>("#fileSelector").files = e.dataTransfer.files;
-    document.querySelector<HTMLElement>("#curFile").innerText = fileListToArray(e.dataTransfer.files).map(file => Path.getFile(file.name)).join(", ");
     document.querySelector<HTMLFormElement>("#fileuploadform").submit();
   }, );
 

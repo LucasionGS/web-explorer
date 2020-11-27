@@ -80,12 +80,15 @@ img.previewimage:hover {
 }
 
 div#dropzone {
-  width: 80%;
+  width: 100%;
   margin: auto;
   outline-style: dotted;
   height: 256px;
   background-color: rgb(75, 75, 75);
   opacity: 0.75;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 div#dropzone:hover {
@@ -96,10 +99,6 @@ div#dropzone:hover {
 div#dropzone:active {
   outline-color: var(--txtcolor);
   cursor: pointer;
-}
-
-label#curFile {
-  display: none;
 }
 
 /* Higher res, usually PCs */

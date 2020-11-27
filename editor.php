@@ -1,3 +1,17 @@
+<?php
+require_once("./config.php");
+$lang = isset($_GET["lang"]) ? $_GET["lang"] : "plaintext";
+$file = isset($_GET["file"]) ? $config["files"] . "/" . $_GET["file"] : null;
+$fileData = "";
+
+if ($file != null && is_file($file)) {
+  $fileData = file_get_contents($file);
+  $fileData = str_replace("\\", "\\\\", $fileData);
+  $fileData = str_replace("\n", "\\n", $fileData);
+  $fileData = str_replace("\"", "\\\"", $fileData);
+}
+?>
+
 <!DOCTYPE html>
 <html>
 
@@ -9,9 +23,8 @@
   <link rel="stylesheet" href="/src/style.css">
 </head>
 
-<body>
-  <h2>Monaco Editor Sample</h2>
-  <div id="container" style="width: 800px; height: 600px; border: 1px solid grey"></div>
+<body style="margin: 0; padding: 0;">
+  <div id="container" style="width: 100vw; height: 100vh;"></div>
 
   <!-- OR ANY OTHER AMD LOADER HERE INSTEAD OF loader.js -->
   <script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
@@ -24,8 +37,8 @@
 
     require(['vs/editor/editor.main'], function() {
       var editor = monaco.editor.create(document.getElementById('container'), {
-        value: ['function x() {', '\tconsole.log("Hello world!");', '}'].join('\n'),
-        language: 'javascript',
+        value: "<?php echo $fileData; ?>",
+        language: '<?php echo $lang; ?>',
         theme: "vs-dark"
       });
     });
