@@ -112,7 +112,15 @@ window.addEventListener("load", () => {
     document.querySelector<HTMLFormElement>("#fileuploadform").submit();
   }, );
 
-  d.addEventListener("click", () => {
-    document.querySelector<HTMLInputElement>("#fileSelector").click();
+  const folderActions = document.querySelector("#folderactions");
+  let aBs = folderActions.querySelectorAll(".actionbutton");
+  aBs.forEach(e => {
+    if (e.hasAttribute("for")) {
+      let id = e.getAttribute("for");
+      let box = folderActions.querySelector("#" + id);
+      if (box) {
+        
+      }
+    }
   });
 });

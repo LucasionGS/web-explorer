@@ -1,8 +1,12 @@
 RewriteEngine On
 
+# View files
+RewriteCond %{REQUEST_URI} ^/view/(.*)
+RewriteRule view/(.*) directToFiles.php?path=$1 [L]
+
 # Download files
 RewriteCond %{REQUEST_URI} ^/download/(.*)
-RewriteRule download/(.*) directToFiles.php?path=$1 [L]
+RewriteRule download/(.*) /operators/download.php?target=$1 [L]
 
 # Explorer for getting data.
 RewriteCond %{REQUEST_URI} ^/explorer/(.*)

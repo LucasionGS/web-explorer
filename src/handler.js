@@ -114,7 +114,14 @@ window.addEventListener("load", function () {
         document.querySelector("#curFile").innerText = fileListToArray(e.dataTransfer.files).map(function (file) { return Path.getFile(file.name); }).join(", ");
         document.querySelector("#fileuploadform").submit();
     });
-    d.addEventListener("click", function () {
-        document.querySelector("#fileSelector").click();
+    var folderActions = document.querySelector("#folderactions");
+    var aBs = folderActions.querySelectorAll(".actionbutton");
+    aBs.forEach(function (e) {
+        if (e.hasAttribute("for")) {
+            var id = e.getAttribute("for");
+            var box = folderActions.querySelector("#" + id);
+            if (box) {
+            }
+        }
     });
 });

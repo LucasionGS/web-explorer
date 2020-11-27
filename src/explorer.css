@@ -98,7 +98,7 @@ div#dropzone:active {
 }
 
 label#curFile {
-  display: block;
+  display: none;
 }
 
 /* Higher res, usually PCs */
@@ -123,9 +123,9 @@ label#curFile {
     height: 100%;
   }
 
-  div#dropzone {
+  /* div#dropzone {
     display: none;
-  }
+  } */
 }
 
 div.entry:hover div.actions {
@@ -133,6 +133,10 @@ div.entry:hover div.actions {
 }
 
 div.actions a {
+  color: white;
+}
+
+#folderactions a {
   color: white;
 }
 

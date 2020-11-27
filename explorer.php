@@ -13,7 +13,7 @@ if (is_dir($dir)) {
   $files = array_slice(scandir($dir), $_DIR != "" ? 1 : 2);
 }
 else if (is_file($dir)) {
-  $dirSections[0] = "download";
+  $dirSections[0] = "view";
   $path = "/" . implode("/", $dirSections);
   return header("Location: $path");
 }
@@ -29,14 +29,14 @@ $icons = [
   "." =>    "/src/icons/unknown.png",
 
   // Media
-  "avi" =>  "/src/icons/avi.png",
-  "wav" =>  "/src/icons/wav.png",
-  "jpg" =>  "/src/icons/jpg.png",
-  "jpeg" =>  "/src/icons/jpg.png",
-  "png" =>  "/src/icons/png.png",
-  "psd" =>  "/src/icons/psd.png",
-  "mov" =>  "/src/icons/mov.png",
-  "mp3" =>  "/src/icons/mp3.png",
+  "avi" => "/src/icons/avi.png",
+  "wav" => "/src/icons/wav.png",
+  "jpg" => "/src/icons/jpg.png",
+  "jpeg" => "/src/icons/jpg.png",
+  "png" => "/src/icons/png.png",
+  "psd" => "/src/icons/psd.png",
+  "mov" => "/src/icons/mov.png",
+  "mp3" => "/src/icons/mp3.png",
 
   // Coding
   "css" =>  "/src/icons/css.png",
@@ -148,7 +148,7 @@ class FileEntry extends Entry implements InteractableEntry
           <p>$name</p>
         </div>
         <div class=\"actions\">
-          <a href=\"/operators/download.php?target=$realPath\">
+          <a href=\"/download/$realPath\">
             <div class=\"actionbutton\">Download</div>
           </a>
           <a onclick=\"if (confirm('Are you sure you want to delete $name?')) ''; else event.preventDefault();\" href=\"/operators/delete.php?target=$realPath\">
@@ -208,6 +208,10 @@ if ($files[0] == "..") {
   <div class="centercontainer">
     <div id="filecontainer">
       <div>
+        <div id="folderactions">
+          <a class="actionbutton" href="/operators/mkdir?target=" for="newfolderaction">New Folder</a>
+          <div class="actionfields" id="newfolderaction"></div>
+        </div>
         <p>Found <?php echo $total; ?> files</p>
       </div>
       <?php
@@ -247,10 +251,10 @@ if ($files[0] == "..") {
           </select>
           <br>
           <label id="curFile" onclick="document.querySelector('#fileSelector').click();">Click here to choose a file.</label>
-          <div id="dropzone">
-          <p style="text-align: center; padding-top: calc(128px - 1em); padding-bottom: 128px;">
-            Drag files here or click to select
-          </p>
+          <div id="dropzone" onclick="document.querySelector('#fileSelector').click();">
+            <p style="text-align: center; padding-top: calc(128px - 1em); padding-bottom: 128px;">
+              Drag files here or click to select
+            </p>
           </div>
           <br><br>
           <input onclick="upload(event)" id="uploadbutton" type="submit" value="Upload" style="width:64px; height: 32px;">
@@ -276,7 +280,7 @@ if ($files[0] == "..") {
       var ac = new AutoComplete(document.querySelector("#customDir"));
       ac.completions = [
         <?php
-        function PrintFiles($files)
+        function printFiles($files)
         {
           global $filesPath;
           for ($i = 0; $i < count($files); $i++) { 
@@ -284,7 +288,7 @@ if ($files[0] == "..") {
               echo "\"".substr($file, strlen($filesPath . "/"))."\",";
           }
         }
-        PrintFiles($files);
+        printFiles($files);
         ?>
       ];
 
