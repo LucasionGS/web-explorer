@@ -255,12 +255,17 @@ if ($files[0] == "..") {
   <link rel="stylesheet" href="/src/style.css">
   <script src="/src/autocomplete.js"></script>
   <script async src="/src/handler.js"></script>
+  <script async src="/src/search.js"></script>
 </head>
 <body>
   <div class="centercontainer">
     <div id="filecontainer">
       <div>
         <div id="folderactions">
+          <input type="search" id="searchbox" placeholder="Search..." autocomplete="off" onsearch="searchFromElementId('searchbox')" oninput="searchFromElementId('searchbox')">
+          <br>
+          <button onclick="searchFromElementId('searchbox')">Search</button>
+
           <a class="actionbutton" href="#mkdir" for="newfolderaction" onclick="folderActionButtonHandler(this)">New Folder</a>
           <div class="actionfields" id="newfolderaction" hidden>
             <form action="/operators/mkdir">

@@ -10,7 +10,7 @@ function fileListToArray(list: FileList) {
   return arr;
 }
 
-function upload(e) {
+function upload(e: Event) {
   // if (document.querySelector<HTMLInputElement>("#fileSelector").value == "") {
   //   e.preventDefault();
   //   document.querySelector<HTMLElement>("#curFile").innerText = "Please select a file";
@@ -122,8 +122,11 @@ window.addEventListener("load", () => {
 
   window.addEventListener("drop", e => {
     e.preventDefault();
-    document.querySelector<HTMLInputElement>("#fileSelector").files = e.dataTransfer.files;
-    document.querySelector<HTMLFormElement>("#fileuploadform").submit();
+    let files = e.dataTransfer.files;
+    if (files.length > 0) {
+      document.querySelector<HTMLInputElement>("#fileSelector").files = files;
+      document.querySelector<HTMLFormElement>("#fileuploadform").submit();
+    }
   }, );
 
   // let aBs = folderActions.querySelectorAll<HTMLAnchorElement>(".actionbutton");
