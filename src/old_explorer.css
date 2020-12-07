@@ -1,0 +1,159 @@
+body {
+  margin: 0;
+  padding: 0 16px 0 16px;
+  background-color: #2b2b2b;
+  /* height: calc(100vh - 64px); */
+  box-sizing: border-box;
+  overflow: hidden;
+  color: white;
+  font-family: Arial, Helvetica, sans-serif;
+  background-color: #1b1b1b;
+}
+
+div.centercontainer {
+  margin: auto;
+  height: 100%;
+}
+
+div#filecontainer {
+  display: inline-block;
+  border-radius: 10px;
+  width: 49%;
+  height: 100vh;
+  max-height: 100vh;
+  background-color: #1b1b1b;
+  box-sizing: border-box;
+  padding: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+div.entry:hover {
+  position: relative;
+}
+
+div.entry:hover {
+  background-color: #2b2b2b;
+}
+
+div#uploadfile {
+  display: inline-block;
+  border-radius: 10px;
+  width: 49%;
+  height: 100vh;
+  max-height: 100vh;
+  background-color: #1b1b1b;
+  box-sizing: border-box;
+  padding: 8px;
+  overflow-y: auto;
+}
+
+div.entryname {
+  display: inline-block;
+  font-size: 16px;
+  color: white;
+  width: 80%;
+}
+
+a.entrylink {
+  text-decoration: none;
+  color: white;
+}
+
+img.entryicon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+}
+
+.previewimage {
+  display: block;
+  max-width: 50%;
+  max-height: 25vh;
+}
+
+img.previewimage {
+  transition: transform 0.2s ease-in-out;
+}
+
+img.previewimage:hover {
+  transform: translateY(-2px);
+}
+
+div#dropzone {
+  width: 100%;
+  margin: auto;
+  outline-style: dotted;
+  height: 256px;
+  background-color: rgb(75, 75, 75);
+  opacity: 0.75;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+div#dropzone:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
+div#dropzone:active {
+  outline-color: var(--txtcolor);
+  cursor: pointer;
+}
+
+/* Higher res, usually PCs */
+@media only screen and (min-width: 768px) {
+  div.actions {
+    display: none;
+    height: 100%;
+    position: absolute;
+    right: 0;
+    top: 0;
+    background-color: #2b2b2b;
+    border-left-style: solid;
+    border-width: 1px;
+  }
+}
+
+/* Lower res, usually phones */
+@media only screen and (max-width: 767px) {
+  div.actions {
+    display: flex;
+    flex-direction: column;
+    width: 20%;
+    height: 100%;
+  }
+
+  /* div#dropzone {
+    display: none;
+  } */
+}
+
+div.entry:hover div.actions {
+  display: flex;
+}
+
+div.actions a {
+  color: white;
+}
+
+#folderactions a {
+  color: white;
+}
+
+div.actionbutton {
+  /* width: 24px; */
+  height: 24px;
+  margin: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+div.actionbutton:hover {
+  transform: translateY(-2px);
+}
+
+div.actionbutton > img {
+  width: 100%;
+  height: 100%;
+}

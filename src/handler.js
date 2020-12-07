@@ -49,21 +49,6 @@ class Path {
         return path.split("/").pop();
     }
 }
-class Entry {
-    constructor(element) {
-        this.element = element;
-    }
-}
-class DirectoryEntry extends Entry {
-    constructor(element) {
-        super(element);
-    }
-}
-class FileEntry extends Entry {
-    constructor(element) {
-        super(element);
-    }
-}
 function setLargePreviewImage(path, type = "image") {
     let img = document.querySelector("img#largeimagepreview");
     let video = document.querySelector("video#largevideopreviewelement");

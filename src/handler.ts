@@ -56,28 +56,6 @@ class Path
   }
 }
 
-class Entry
-{
-  path: string;
-  constructor(public element: HTMLDivElement) {
-    
-  }
-}
-
-class DirectoryEntry extends Entry
-{
-  constructor(element: HTMLDivElement) {
-    super(element);
-  }
-}
-
-class FileEntry extends Entry
-{
-  constructor(element: HTMLDivElement) {
-    super(element);
-  }
-}
-
 function setLargePreviewImage(path: string, type: "image" | "video" = "image") {
   let img = document.querySelector<HTMLImageElement>("img#largeimagepreview");
   let video = document.querySelector<HTMLVideoElement>("video#largevideopreviewelement");
