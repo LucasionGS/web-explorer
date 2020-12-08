@@ -187,8 +187,15 @@ var FileSystem;
                     let p = document.createElement("p");
                     p.innerText = "Renaming \"" + this.getName() + "\"...";
                     let nameInput = document.createElement("input");
+                    nameInput.value = this.getName();
+                    let ext = "";
+                    if (this.isFile())
+                        ext = this.getExt();
                     setTimeout(() => {
                         nameInput.focus();
+                        nameInput.setSelectionRange(0, this.getName().length - (ext ? ext.length + 1 : 0));
+                        nameInput.style.fontSize = "24px";
+                        nameInput.style.width = "100%";
                     }, 0);
                     let create = document.createElement("button");
                     create.innerText = "Rename";
