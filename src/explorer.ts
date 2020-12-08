@@ -122,7 +122,7 @@ filecontainer.addEventListener("drop", async e => {
     console.log(i + "/" + len);
     console.log(bulk);
     
-    await FileSystem.currentDirectory.uploadFile(bulk);
+    await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
   }
 
   FileSystem.currentDirectory.open();

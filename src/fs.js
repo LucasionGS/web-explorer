@@ -349,7 +349,7 @@ var FileSystem;
             httpReq.upload.addEventListener('progress', function (e) {
                 // upload progress as percentage
                 let percent_completed = (e.loaded / e.total) * 100;
-                p.append("Uploading... " + percent_completed.toFixed(2) + "%");
+                p.innerText = "Uploading... " + percent_completed.toFixed(2) + "%";
                 if (message)
                     p.append(document.createElement("hr"), message);
             });

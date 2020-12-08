@@ -102,7 +102,7 @@ filecontainer.addEventListener("drop", async (e) => {
         const bulk = files.splice(0, 20);
         console.log(i + "/" + len);
         console.log(bulk);
-        await FileSystem.currentDirectory.uploadFile(bulk);
+        await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
     }
     FileSystem.currentDirectory.open();
 });
