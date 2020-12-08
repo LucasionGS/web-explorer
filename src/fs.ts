@@ -1,4 +1,6 @@
 namespace FileSystem {
+  export var currentDirectory: DirectoryEntry;
+  
   interface EntryElement extends HTMLDivElement {
     entry: Entry;
   }
@@ -18,6 +20,7 @@ namespace FileSystem {
 
   function setUrl(path: string) {
     history.pushState("", "", "/explorer" + path);
+    document.querySelector("title").innerText = "File Explorer | " + path;
   }
 
   export async function readDirectory(path: string) {
@@ -58,12 +61,31 @@ namespace FileSystem {
 
   export class Entry
   {
+    parent: this;
     constructor(public path: string, public type: FileType) {
       this.treeElement.entry = this;
       this.treeElement.classList.add("treeEntryElement");
       
       this.element.entry = this;
       this.element.classList.add("entryElement");
+    }
+
+    getName() {
+      return this.path.split("/").pop()
+    }
+
+    setDetails() {
+      let entryinfo = document.getElementById("entryinfo") as HTMLDivElement;
+
+      entryinfo.innerHTML = "";
+      entryinfo.append(
+        "Full Path: " + this.path,
+        document.createElement("br"),
+        document.createElement("br"),
+        "Name: " + this.getName(),
+        document.createElement("br"),
+        document.createElement("br"),
+      );
     }
     
     isFile(): this is FileEntry {
@@ -73,6 +95,14 @@ namespace FileSystem {
     isDirectory(): this is DirectoryEntry {
       return this instanceof DirectoryEntry;
     }
+
+    public get selected() {
+      return this.element.hasAttribute("selected");
+    };
+    
+    public set selected(v) {
+      this.element.toggleAttribute("selected", v);
+    };
 
     rename() {
       throw "Not yet implemented";
@@ -110,13 +140,22 @@ namespace FileSystem {
         });
         treeDiv.addEventListener("contextmenu", e => {
           e.preventDefault();
-          treeEntriesContainer.toggleAttribute("collapsed");
+          if (this.entries.length == 0) {
+            this.open();
+          }
+          else treeEntriesContainer.toggleAttribute("collapsed");
         });
         this.treeElement.appendChild(treeDiv);
-        const p = document.createElement("p");
+        setTimeout(() => {
+          const icon = document.createElement("img");
+          icon.src = this.icon;
+          treeDiv.appendChild(icon);
+          const p = document.createElement("p");
+          p.innerText = this.getName();
+          treeDiv.appendChild(p);
+        }, 0);
         
-        p.innerText = this.path.split("/").pop();
-        treeDiv.appendChild(p);
+
 
         const treeEntriesContainer = document.createElement("div");
         treeEntriesContainer.classList.add("treeEntriesContainer");
@@ -126,35 +165,75 @@ namespace FileSystem {
           treeEntriesContainer.appendChild(e.treeElement);
         });
       }
-      this.element.entry = this;
 
       // Explorer Entry
       {
-
+        this.element.innerHTML = "";
+        const div = document.createElement("div") as EntryElement;
+        div.classList.add("entryItem");
+        div.addEventListener("dblclick", e => {
+          this.open();
+        });
+        div.addEventListener("contextmenu", e => {
+          e.preventDefault();
+          this.open();
+        });
+        div.addEventListener("click", e => {
+          this.setDetails();
+        });
+        this.element.appendChild(div);
+        setTimeout(() => {
+          const icon = document.createElement("img");
+          icon.src = this.icon;
+          div.appendChild(icon);
+          const p = document.createElement("p");
+          p.innerText = this.getName();
+          div.appendChild(p);
+        }, 0);
       }
     }
 
     async open() {
+      currentDirectory = this;
       setUrl(this.path);
+      if (this.entries.length == 0) {
+        this.treeElement.innerHTML = "";
+        this.treeElement.appendChild(loadingSpinner());
+      }
+      let fileContainer = document.getElementById("filecontainer") as HTMLDivElement;
+      fileContainer.innerHTML = "";
+      fileContainer.appendChild(loadingSpinner());
+      
       const entries = await readDirectory(this.path);
+      fileContainer.innerHTML = "";
       let difference: boolean = false;
       for (let i = 0; i < entries.length; i++) {
         const e = entries[i];
         const thisE = this.entries[i];
+
+        if (e.getName() == "..") {
+          entries.splice(i--, 1);
+          continue;
+        }
+
+        e.parent = this;
+        fileContainer.appendChild(e.element);
+
         if (!thisE
           || e.path != thisE.path
           || e.type != thisE.type
         ) {
           difference = true;
-          break;
         }
       }
 
-      if (difference) {
+      if (difference || entries.length == 0) {
         this.entries = entries;
         this.updateElement();
       }
-
+      
+      this.setDetails();
+      
       return this.entries;
     }
   }
@@ -183,17 +262,49 @@ namespace FileSystem {
           // e.preventDefault();
         });
         this.treeElement.appendChild(treeDiv);
-        const p = document.createElement("p");
         
-        p.innerText = this.path.split("/").pop();
-        treeDiv.appendChild(p);
+        setTimeout(() => {
+          const icon = document.createElement("img");
+          icon.src = this.icon;
+          treeDiv.appendChild(icon);
+          const p = document.createElement("p");
+          p.innerText = this.getName();
+          treeDiv.appendChild(p);
+        }, 0);
       }
-      this.element.entry = this;
-
+      
       // Explorer Entry
       {
+        this.element.innerHTML = "";
+        const div = document.createElement("div") as EntryElement;
+        div.classList.add("entryItem");
+        div.addEventListener("dblclick", e => {
+          this.open();
+        });
+        div.addEventListener("contextmenu", e => {
+          // e.preventDefault();
+        });
+        div.addEventListener("click", e => {
+          this.setDetails();
+        });
+        this.element.appendChild(div);
 
+        setTimeout(() => {
+          const icon = document.createElement("img");
+          icon.src = this.icon;
+          div.appendChild(icon);
+          const p = document.createElement("p");
+          p.innerText = this.getName();
+          div.appendChild(p);
+        }, 0);
       }
     }
+  }
+
+  export function loadingSpinner() {
+    let div = document.createElement("div");
+    div.classList.add("lds-spinner");
+    div.innerHTML = '<div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>';
+    return div;
   }
 }

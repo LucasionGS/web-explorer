@@ -1,4 +1,5 @@
 declare namespace FileSystem {
+    var currentDirectory: DirectoryEntry;
     interface EntryElement extends HTMLDivElement {
         entry: Entry;
     }
@@ -16,9 +17,13 @@ declare namespace FileSystem {
     class Entry {
         path: string;
         type: FileType;
+        parent: this;
         constructor(path: string, type: FileType);
+        getName(): string;
+        setDetails(): void;
         isFile(): this is FileEntry;
         isDirectory(): this is DirectoryEntry;
+        selected: boolean;
         rename(): void;
         delete(): void;
         element: EntryElement;
@@ -37,4 +42,5 @@ declare namespace FileSystem {
         open(): Promise<void>;
         updateElement(): void;
     }
+    function loadingSpinner(): HTMLDivElement;
 }

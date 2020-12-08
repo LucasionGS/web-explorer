@@ -35,9 +35,100 @@ body {
 
 .treeEntryItem {
   padding: 2px;
+  padding-left: 8px;
+  transition: all 0.1s ease-in-out;
+}
+
+.treeEntryItem img {
+  display: inline-block;
+  max-width: 1em;
+  max-height: 1em;
+}
+
+.treeEntryItem p {
+  display: inline-block;
+}
+
+[explorer-style-tree="minimal"] .treeEntryItem img {
+  display: inline;
+  max-width: 1em;
+  max-height: 1em;
+}
+
+[explorer-style-tree="minimal"] .treeEntryItem p {
+  display: inline;
 }
 
 .treeEntryItem:hover {
   cursor: pointer;
-  background-color: #1b1b1b;
+  background-color: #00ff6234;
+  border-radius: 10px;
+}
+
+#filecontainer {
+  border-left: solid 1px white;
+  border-right: solid 1px white;
+  display: flex;
+  flex-wrap: wrap;
+  overflow: auto;
+  height: 100vh;
+}
+
+.entryItem {
+  padding: 2px;
+  padding-left: 8px;
+  transition: all 0.1s ease-in-out;
+  width: 128px;
+  /* height: 128px; */
+}
+
+.entryItem:hover {
+  cursor: pointer;
+  background-color: #00ff6234;
+  border-radius: 10px;
+}
+
+.entryItem img {
+  display: block;
+  margin: auto;
+  max-width: 128px;
+  max-height: calc(128px - 1em);
+}
+
+.entryItem p {
+  display: block;
+  word-wrap: break-word;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+#filedetails {
+  flex: 1;
+  overflow: hidden;
+  word-wrap: break-word;
+}
+
+@media only screen and (min-width: 769px) {
+  #filetree {
+    flex: 1;
+  }
+  #filecontainer {
+    flex: 3;
+  }
+  #filedetails {
+    flex: 1;
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  #filetree {
+    flex: 2;
+  }
+  #filecontainer {
+    flex: 3;
+  }
+  #filedetails {
+    flex: 0;
+  }
 }
