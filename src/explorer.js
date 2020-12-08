@@ -97,9 +97,10 @@ filecontainer.addEventListener("drop", async (e) => {
         const file = fileList[i];
         files.push(file);
     }
-    let len = Math.ceil(files.length / 20);
+    let maxFiles = 5;
+    let len = Math.ceil(files.length / maxFiles);
     for (let i = 0; i < len; i++) {
-        const bulk = files.splice(0, 20);
+        const bulk = files.splice(0, maxFiles);
         console.log(i + "/" + len);
         console.log(bulk);
         await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
