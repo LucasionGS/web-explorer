@@ -29,8 +29,7 @@ for ($i=0; $i < $totalCount; $i++) {
     while(substr($gotoDir, strlen($gotoDir)-1) == "/") {
       $gotoDir = substr($gotoDir, 0, -1);
     }
-    // echo '<a href="./?path='.$gotoDir.'">Go to Upload page</a><br>';
-    // echo $header;
+    $success = true;
   }
   else {
     $success = false;

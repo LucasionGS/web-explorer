@@ -457,12 +457,17 @@ namespace FileSystem {
 
       // request finished event
       httpReq.addEventListener('load', (e) => {
-        closeModal();
-        let res: {success: boolean, reason?: string} = JSON.parse(httpReq.response);
-        if (!res.success) {
-          alert(res.reason);
+        try {
+          closeModal();
+          let res: {success: boolean, reason?: string} = JSON.parse(httpReq.response);
+          if (!res.success) {
+            alert(res.reason);
+          }
+          resolve(res);
+        } catch (error) {
+          console.error(httpReq.response);
+          resolve({success: false, reason: "Catch went off."})
         }
-        resolve(res);
       });
 
       // send POST request to server
