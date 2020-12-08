@@ -7,6 +7,7 @@ $fileData = "";
 if ($file != null && is_file($file)) {
   $fileData = file_get_contents($file);
   $fileData = str_replace("\\", "\\\\", $fileData);
+  $fileData = str_replace("\r\n", "\\r\\n", $fileData);
   $fileData = str_replace("\n", "\\n", $fileData);
   $fileData = str_replace("\"", "\\\"", $fileData);
 }

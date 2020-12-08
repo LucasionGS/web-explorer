@@ -17,15 +17,25 @@ declare namespace FileSystem {
     class Entry {
         path: string;
         type: FileType;
-        parent: this;
+        static deselectAll(): void;
+        parent: DirectoryEntry;
         constructor(path: string, type: FileType);
         getName(): string;
         setDetails(): void;
         isFile(): this is FileEntry;
         isDirectory(): this is DirectoryEntry;
         selected: boolean;
-        rename(): void;
-        delete(): void;
+        static getCurrentEntries(): Entry[];
+        static getSelectedEntries(): Entry[];
+        static bulkDelete(bulk: Entry[]): Promise<void>;
+        rename(newName?: string, skipReload?: boolean): Promise<{
+            success: boolean;
+            reason?: string;
+        }>;
+        delete(skipReload?: boolean): Promise<void | {
+            success: boolean;
+            reason?: string;
+        }>;
         element: EntryElement;
         treeElement: TreeEntryElement;
         physicalPath: string;
@@ -34,13 +44,25 @@ declare namespace FileSystem {
     class DirectoryEntry extends Entry implements Openable {
         constructor(path: string);
         entries: Entry[];
+        newFolder(name?: string): Promise<void>;
+        uploadFile(files: Blob[], message?: string): Promise<{
+            success: boolean;
+            reason?: string;
+        }>;
         updateElement(): void;
         open(): Promise<Entry[]>;
     }
     class FileEntry extends Entry implements Openable {
         constructor(path: string);
         open(): Promise<void>;
+        size: number;
+        static parseSize(size: number): string;
+        parseSize(): string;
+        getExt(): string;
+        isImage(): boolean;
+        openInEditor(): void;
         updateElement(): void;
     }
     function loadingSpinner(): HTMLDivElement;
+    function traverseDirectory(entry: any): Promise<{}>;
 }

@@ -1,12 +1,22 @@
 <?php
-$target = $_GET["target"];
-$newname = $_GET["newname"];
+require_once("../config.php");
+$files = $config["files"];
+$target = $_REQUEST["target"];
 
 $root = $_SERVER["DOCUMENT_ROOT"];
 
 if (isset($target)) {
-  $target = $root . "/files/" . $target;
-  if (is_file($target)) unlink($target);
-  else if (is_dir($target)) rmdir($target);
+  $target = $root . "/$files/" . $target;
+  if (is_file($target)) {
+    $success = unlink($target);
+    $reason = !$success ? "Unable to remove file." : null;
+  }
+  else if (is_dir($target)) {
+    $success = rmdir($target);
+    $reason = !$success ? "Unable to remove folder." : null;
+  }
 }
-header("Location: " . $_SERVER["HTTP_REFERER"]);
+echo json_encode([
+  "success" => $success,
+  "reason" => $reason
+]);

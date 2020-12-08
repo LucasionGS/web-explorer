@@ -1,20 +1,26 @@
 <?php
-$target = $_GET["target"];
-$newname = $_GET["newname"];
+require_once("../config.php");
+$files = $config["files"];
+$target = $_REQUEST["target"];
+$newname = $_REQUEST["newname"];
 $newPath = dirname($target) . "/$newname";
 
 $root = $_SERVER["DOCUMENT_ROOT"];
 
 if (isset($target) && isset($newname) && trim($newname) != "") {
-  $target = $root . "/files/" . $target;
-  $newPath = $root . "/files/" . $newPath;
-  echo $target . "<br>";
-  echo $newPath . "<br>";
+  $target = $root . "/$files/" . $target;
+  $newPath = $root . "/$files/" . $newPath;
   if (!file_exists($newPath)) {
-    rename($target, $newPath);
+    $success = rename($target, $newPath);
+    $reason = null;
   }
   else {
-    echo "Already exists<br>";
+    $success = false;
+    $reason = "Path already exists.";
   }
 }
-header("Location: " . $_SERVER["HTTP_REFERER"]);
+
+echo json_encode([
+  "success" => $success,
+  "reason" => $reason
+]);

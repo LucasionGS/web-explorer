@@ -122,6 +122,7 @@ class FileEntry extends Entry
     $this->physicalPath = encodeFullUrl($filePath);
     $_t = explode("/", $filePath);
     array_shift($_t);
+    $this->size = filesize($filePath);
 
     $this->path = "/" . implode("/", $_t);
     $this->type = 1;
@@ -130,6 +131,7 @@ class FileEntry extends Entry
       $this->icon = $icons[$ext];
     }
   }
+  public $size;
 }
 
 /**

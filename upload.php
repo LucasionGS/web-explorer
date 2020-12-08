@@ -25,7 +25,6 @@ for ($i=0; $i < $totalCount; $i++) {
   // $size = $_FILES["fileToUpload"]["size"][$i];
   // $t_name = $_FILES["fileToUpload"]["tmp_name"][$i];
   if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"][$i], $dir.$name)) {
-    echo 'Successfully uploaded.<br><a href="'.$dir.'">Go to File\'s Directory</a><br>';
     $gotoDir = substr($dir, strlen($config["files"] . "/"));
     while(substr($gotoDir, strlen($gotoDir)-1) == "/") {
       $gotoDir = substr($gotoDir, 0, -1);
@@ -38,9 +37,7 @@ for ($i=0; $i < $totalCount; $i++) {
   }
 }
 
-if ($success) {
-  $header = "Location: /explorer/" . $_POST["dir"];
-  header($header);
-}
-else
-  echo 'Upload failed for a file some reason... <a href="./">Go to back to the upload page</a>';
+echo json_encode([
+  "success" => $success,
+  "reason" => $success ? null : "Upload failed."
+]);
