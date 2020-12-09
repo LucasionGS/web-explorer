@@ -105,8 +105,63 @@ namespace FileSystem {
           self.newFolder();
         });
 
+        let folderInput = document.createElement("input");
+        folderInput.type = "file";
+        folderInput.multiple = true;
+        let folderUploadButton = document.createElement("button");
+        folderUploadButton.innerText = "Upload folder";
+        folderUploadButton.addEventListener("click", () => {
+          folderInput.click();
+        })
+        folderInput.toggleAttribute("webkitdirectory", true);
+
+        folderInput.addEventListener("change", async e => {
+          let files: File[] = FileSystem.fileListToArray(folderInput.files);
+          let maxFiles = 5;
+          let len = Math.ceil(files.length / maxFiles);
+          for (let i = 0; i < len; i++) {
+            const bulk = files.splice(0, maxFiles);
+            console.log(i + "/" + len);
+            console.log(bulk);
+            
+            await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+          }
+
+          FileSystem.currentDirectory.open();
+        });
+
+        let fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.multiple = true;
+        let fileUploadButton = document.createElement("button");
+        fileUploadButton.innerText = "Upload files";
+        fileUploadButton.addEventListener("click", () => {
+          fileInput.click();
+        })
+        // fileInput.toggleAttribute("webkitdirectory", true);
+
+        fileInput.addEventListener("change", async e => {
+          let files: File[] = FileSystem.fileListToArray(fileInput.files);
+          let maxFiles = 5;
+          let len = Math.ceil(files.length / maxFiles);
+          for (let i = 0; i < len; i++) {
+            const bulk = files.splice(0, maxFiles);
+            console.log(i + "/" + len);
+            console.log(bulk);
+            
+            await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+          }
+
+          FileSystem.currentDirectory.open();
+        });
+
         entryinfo.append(
           newFolder,
+          hr(),
+          fileUploadButton,
+          br(),
+          folderUploadButton,
+          hr(),
         );
       }
 
@@ -433,13 +488,17 @@ namespace FileSystem {
       }
     }
 
-    uploadFile(files: Blob[], message?: string) {
+    uploadFile(files: File[], message?: string) {
       let resolve: (value?: {success: boolean; reason?: string; } | PromiseLike<{success: boolean; reason?: string; }>) => void;
       let promise = new Promise<{success: boolean, reason?: string}>(res => resolve = res);
       if (files.length == 0) return;
       let data = new FormData();
-      data.append('dir', this.path);
-      files.forEach(f => data.append('fileToUpload[]', f));
+      data.append("dir", this.path);
+      files.forEach(async f => {
+        data.append("fileToUpload[]", f);
+        data.append("fileName[]", (f as any).webkitRelativePath ? (f as any).webkitRelativePath : f.name)
+      });
+      
 
       let httpReq = new XMLHttpRequest();
       httpReq.open('POST', '/upload.php');
@@ -466,6 +525,8 @@ namespace FileSystem {
         try {
           closeModal();
           let res: {success: boolean, reason?: string} = JSON.parse(httpReq.response);
+          console.log(res);
+          
           if (!res.success) {
             alert(res.reason);
           }
@@ -614,7 +675,7 @@ namespace FileSystem {
     }
 
     async open() {
-      if (this.isImage()) {
+      if (this.isImage() || this.isVideo()) {
         modalPreviewMedia(this);
         return;
       }
@@ -659,6 +720,18 @@ namespace FileSystem {
         "png",
         "svg",
         "webp",
+      ].indexOf(this.getExt().toLowerCase()) != -1;
+    }
+    
+    isVideo() {
+      return [
+        "mp4"
+      ].indexOf(this.getExt().toLowerCase()) != -1;
+    }
+    
+    isAudio() {
+      return [
+        "mp3"
       ].indexOf(this.getExt().toLowerCase()) != -1;
     }
 
@@ -774,5 +847,15 @@ namespace FileSystem {
         });
       })();
     });
+  }
+
+  export function fileListToArray(fileList: FileList) {
+    let files: File[] = [];
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      files.push(file);
+    }
+
+    return files;
   }
 }

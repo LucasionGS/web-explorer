@@ -79,7 +79,49 @@ var FileSystem;
                 newFolder.addEventListener("click", () => {
                     self.newFolder();
                 });
-                entryinfo.append(newFolder);
+                let folderInput = document.createElement("input");
+                folderInput.type = "file";
+                folderInput.multiple = true;
+                let folderUploadButton = document.createElement("button");
+                folderUploadButton.innerText = "Upload folder";
+                folderUploadButton.addEventListener("click", () => {
+                    folderInput.click();
+                });
+                folderInput.toggleAttribute("webkitdirectory", true);
+                folderInput.addEventListener("change", async (e) => {
+                    let files = FileSystem.fileListToArray(folderInput.files);
+                    let maxFiles = 5;
+                    let len = Math.ceil(files.length / maxFiles);
+                    for (let i = 0; i < len; i++) {
+                        const bulk = files.splice(0, maxFiles);
+                        console.log(i + "/" + len);
+                        console.log(bulk);
+                        await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+                    }
+                    FileSystem.currentDirectory.open();
+                });
+                let fileInput = document.createElement("input");
+                fileInput.type = "file";
+                fileInput.multiple = true;
+                let fileUploadButton = document.createElement("button");
+                fileUploadButton.innerText = "Upload files";
+                fileUploadButton.addEventListener("click", () => {
+                    fileInput.click();
+                });
+                // fileInput.toggleAttribute("webkitdirectory", true);
+                fileInput.addEventListener("change", async (e) => {
+                    let files = FileSystem.fileListToArray(fileInput.files);
+                    let maxFiles = 5;
+                    let len = Math.ceil(files.length / maxFiles);
+                    for (let i = 0; i < len; i++) {
+                        const bulk = files.splice(0, maxFiles);
+                        console.log(i + "/" + len);
+                        console.log(bulk);
+                        await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+                    }
+                    FileSystem.currentDirectory.open();
+                });
+                entryinfo.append(newFolder, hr(), fileUploadButton, br(), folderUploadButton, hr());
             }
             if (this.path != "/") {
                 let deleteEntry = document.createElement("button");
@@ -341,8 +383,11 @@ var FileSystem;
             if (files.length == 0)
                 return;
             let data = new FormData();
-            data.append('dir', this.path);
-            files.forEach(f => data.append('fileToUpload[]', f));
+            data.append("dir", this.path);
+            files.forEach(async (f) => {
+                data.append("fileToUpload[]", f);
+                data.append("fileName[]", f.webkitRelativePath ? f.webkitRelativePath : f.name);
+            });
             let httpReq = new XMLHttpRequest();
             httpReq.open('POST', '/upload.php');
             let closeModal;
@@ -365,6 +410,7 @@ var FileSystem;
                 try {
                     closeModal();
                     let res = JSON.parse(httpReq.response);
+                    console.log(res);
                     if (!res.success) {
                         alert(res.reason);
                     }
@@ -497,7 +543,7 @@ var FileSystem;
             this.updateElement();
         }
         async open() {
-            if (this.isImage()) {
+            if (this.isImage() || this.isVideo()) {
                 modalPreviewMedia(this);
                 return;
             }
@@ -539,6 +585,16 @@ var FileSystem;
                 "png",
                 "svg",
                 "webp",
+            ].indexOf(this.getExt().toLowerCase()) != -1;
+        }
+        isVideo() {
+            return [
+                "mp4"
+            ].indexOf(this.getExt().toLowerCase()) != -1;
+        }
+        isAudio() {
+            return [
+                "mp3"
             ].indexOf(this.getExt().toLowerCase()) != -1;
         }
         openInEditor() {
@@ -657,4 +713,13 @@ var FileSystem;
         });
     }
     FileSystem.traverseDirectory = traverseDirectory;
+    function fileListToArray(fileList) {
+        let files = [];
+        for (let i = 0; i < fileList.length; i++) {
+            const file = fileList[i];
+            files.push(file);
+        }
+        return files;
+    }
+    FileSystem.fileListToArray = fileListToArray;
 })(FileSystem || (FileSystem = {}));

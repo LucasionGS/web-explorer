@@ -22,7 +22,8 @@ async function goToInstantPath(entriesPromise, segments) {
 // Shortcuts
 addEventListener("keydown", async (e) => {
     const { ctrlKey, altKey, shiftKey, key } = e;
-    if (key == "F2") {
+    let inInput = e.target.tagName == "INPUT";
+    if (key == "F2" && !inInput) {
         e.preventDefault();
         let selectedEntries = FileSystem.Entry.getSelectedEntries();
         if (selectedEntries.length == 1) {
@@ -32,17 +33,17 @@ addEventListener("keydown", async (e) => {
             alert("Can only rename one item at a time.");
         }
     }
-    if (key.toLowerCase() == "n" && ctrlKey && altKey) {
+    if (key.toLowerCase() == "n" && ctrlKey && altKey && !inInput) {
         e.preventDefault();
         FileSystem.currentDirectory.newFolder();
     }
-    if (key == "Backspace" && altKey) {
+    if (key == "Backspace" && altKey && !inInput) {
         e.preventDefault();
         let p = FileSystem.currentDirectory.parent;
         if (p)
             p.open();
     }
-    if (key == "Delete") {
+    if (key == "Delete" && !inInput) {
         e.preventDefault();
         let selected = FileSystem.Entry.getSelectedEntries();
         if (selected.length > 0 && confirm(`Are you sure you want to delete ${selected.length} files?`)) {
@@ -52,17 +53,21 @@ addEventListener("keydown", async (e) => {
             }, 0);
         }
     }
-    if (key == "Escape") {
+    if (key == "Escape" && !inInput) {
         if (!e.ctrlKey)
             FileSystem.Entry.deselectAll();
     }
-    if (key.toLowerCase() == "a" && ctrlKey) {
+    if (key.toLowerCase() == "a" && ctrlKey && !inInput) {
         e.preventDefault();
-        FileSystem.Entry.getCurrentEntries().forEach(e => e.selected = true);
+        let entries = FileSystem.Entry.getCurrentEntries();
+        entries.forEach(e => e.selected = true);
+        entries[0].setDetails();
     }
-    if (key.toLowerCase() == "i" && ctrlKey) {
+    if (key.toLowerCase() == "i" && ctrlKey && !inInput) {
         e.preventDefault();
-        FileSystem.Entry.getCurrentEntries().forEach(e => e.selected = !e.selected);
+        let entries = FileSystem.Entry.getCurrentEntries();
+        entries.forEach(e => e.selected = !e.selected);
+        entries[0].setDetails();
     }
 });
 addEventListener("mousedown", e => {
@@ -91,12 +96,7 @@ filecontainer.addEventListener("dragenter", e => {
 filecontainer.addEventListener("drop", async (e) => {
     e.stopPropagation();
     e.preventDefault();
-    let fileList = e.dataTransfer.files;
-    let files = [];
-    for (let i = 0; i < fileList.length; i++) {
-        const file = fileList[i];
-        files.push(file);
-    }
+    let files = FileSystem.fileListToArray(e.dataTransfer.files);
     let maxFiles = 5;
     let len = Math.ceil(files.length / maxFiles);
     for (let i = 0; i < len; i++) {
@@ -223,7 +223,7 @@ function modalPreviewMedia(fileEntry) {
     modal((m, cm) => {
         const entries = fileEntry.parent.entries.filter(e => e.isFile() && (
         // Filters
-        e.isImage()));
+        e.isImage() || e.isVideo()));
         let mediaIndex = entries.findIndex(e => e.path == fileEntry.path);
         let div = document.createElement("div");
         let close = document.createElement("button");
@@ -246,6 +246,7 @@ function modalPreviewMedia(fileEntry) {
             cm();
         };
         window.addEventListener("keydown", swap);
+        let title = `${mediaIndex + 1}/${entries.length} - ${fileEntry.getName()}`;
         let mediaContainer = document.createElement("div");
         if (fileEntry.isImage()) {
             let img = document.createElement("img");
@@ -255,30 +256,67 @@ function modalPreviewMedia(fileEntry) {
             img.addEventListener("load", () => {
                 mediaContainer.innerHTML = "";
                 mediaContainer.appendChild(img);
-                mediaContainer.append(document.createElement("br"), `${mediaIndex + 1}/${entries.length}`);
-                detectSwipe(mediaContainer, (direction, e) => {
-                    if (direction == "right") {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        closeModal();
-                        modalPreviewMedia(0 > --mediaIndex ? entries[entries.length - 1] : entries[mediaIndex]);
-                    }
-                    if (direction == "left") {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        closeModal();
-                        modalPreviewMedia(entries.length <= ++mediaIndex ? entries[0] : entries[mediaIndex]);
-                    }
-                });
-            });
-            div.addEventListener("click", e => {
-                e.stopPropagation();
-                e.preventDefault();
+                mediaContainer.append(document.createElement("br"), title);
             });
         }
+        else if (fileEntry.isVideo()) {
+            let video = document.createElement("video");
+            let source = document.createElement("source");
+            video.appendChild(source);
+            source.src = "/" + fileEntry.physicalPath;
+            video.classList.add("largepreviewmedia");
+            video.controls = true;
+            mediaContainer.appendChild(FileSystem.loadingSpinner());
+            video.load();
+            video.addEventListener("canplay", () => {
+                mediaContainer.innerHTML = "";
+                mediaContainer.appendChild(video);
+                mediaContainer.append(document.createElement("br"), title);
+            });
+        }
+        div.addEventListener("click", e => {
+            e.stopPropagation();
+            // e.preventDefault();
+        });
+        detectSwipe(mediaContainer, (direction, e) => {
+            if (direction == "right") {
+                e.stopPropagation();
+                e.preventDefault();
+                closeModal();
+                modalPreviewMedia(0 > --mediaIndex ? entries[entries.length - 1] : entries[mediaIndex]);
+            }
+            if (direction == "left") {
+                e.stopPropagation();
+                e.preventDefault();
+                closeModal();
+                modalPreviewMedia(entries.length <= ++mediaIndex ? entries[0] : entries[mediaIndex]);
+            }
+        });
         div.appendChild(mediaContainer);
         div.appendChild(document.createElement("br"));
         div.appendChild(close);
         return div;
     });
 }
+//#region Phone swiping
+detectSwipe(document.getElementById("filecontainer"), (direction, e) => {
+    switch (direction) {
+        case "left":
+            document.getElementById("filetree").toggleAttribute("collapsed", true);
+            break;
+        case "right":
+            document.getElementById("filedetails").toggleAttribute("collapsed", true);
+            break;
+        default:
+            break;
+    }
+});
+detectSwipe(document.getElementById("filetree"), (direction, e) => {
+    if (direction == "right")
+        document.getElementById("filetree").toggleAttribute("collapsed", false);
+});
+detectSwipe(document.getElementById("filedetails"), (direction, e) => {
+    if (direction == "left")
+        document.getElementById("filedetails").toggleAttribute("collapsed", false);
+});
+//#endregion

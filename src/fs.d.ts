@@ -45,7 +45,7 @@ declare namespace FileSystem {
         constructor(path: string);
         entries: Entry[];
         newFolder(name?: string): Promise<void>;
-        uploadFile(files: Blob[], message?: string): Promise<{
+        uploadFile(files: File[], message?: string): Promise<{
             success: boolean;
             reason?: string;
         }>;
@@ -60,9 +60,12 @@ declare namespace FileSystem {
         parseSize(): string;
         getExt(): string;
         isImage(): boolean;
+        isVideo(): boolean;
+        isAudio(): boolean;
         openInEditor(): void;
         updateElement(): void;
     }
     function loadingSpinner(): HTMLDivElement;
     function traverseDirectory(entry: any): Promise<{}>;
+    function fileListToArray(fileList: FileList): File[];
 }

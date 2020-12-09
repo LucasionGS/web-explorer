@@ -142,12 +142,21 @@ body {
 
 @media only screen and (max-width: 768px) {
   #filetree {
-    flex: 0;
+    flex: 5;
+    transition: flex 0.2s ease-in-out;
   }
   #filecontainer {
     flex: 6;
   }
   #filedetails {
-    flex: 2;
+    flex: 5;
+    transition: flex 0.2s ease-in-out;
+  }
+  
+  #filetree[collapsed] {
+    flex: 1;
+  }
+  #filedetails[collapsed] {
+    flex: 1;
   }
 }
