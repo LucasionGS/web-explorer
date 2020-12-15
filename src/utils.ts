@@ -48,3 +48,21 @@ function detectSwipe(element: HTMLElement, callback: (direction: "up" | "down" |
     yDown = null;
   }
 }
+
+function detectDragDrop(element: HTMLElement, callback: (eventType: "dragstart" | "dragover" | "dragleave" | "dragenter" | "drop", evt: DragEvent) => void) {
+  element.addEventListener("dragstart", e => {
+    callback("dragstart", e);
+  });
+  element.addEventListener("dragover", e => {
+    callback("dragover", e);
+  });
+  element.addEventListener("dragleave", e => {
+    callback("dragleave", e);
+  });
+  element.addEventListener("dragenter", e => {
+    callback("dragenter", e);
+  });
+  element.addEventListener("drop", async e => {
+    callback("drop", e);
+  });
+}

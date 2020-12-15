@@ -59,7 +59,7 @@ body {
   display: inline;
 }
 
-.treeEntryItem:hover {
+.treeEntryItem:hover, .treeEntryElement[hover] .treeEntryItem {
   cursor: pointer;
   background-color: #00ff6234;
   border-radius: 10px;
@@ -82,7 +82,6 @@ body {
   transition: all 0.1s ease-in-out;
   width: 128px;
   /* height: 128px; */
-  user-select: none;
 }
 
 .entryElement[selected] .entryItem {
@@ -90,7 +89,7 @@ body {
   border-radius: 10px;
 }
 
-.entryItem:hover {
+.entryItem:hover, .entryElement[hover] .entryItem{
   cursor: pointer;
   background-color: #00ff6234;
   border-radius: 10px;
@@ -101,6 +100,8 @@ body {
   margin: auto;
   max-width: 128px;
   max-height: calc(128px - 1em);
+  user-select: none;
+  pointer-events: none;
 }
 
 .entryItem p {
@@ -109,6 +110,7 @@ body {
   text-align: center;
   margin: 0;
   padding: 0;
+  user-select: none;
 }
 
 #filedetails {

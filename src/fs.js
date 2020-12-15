@@ -60,6 +60,7 @@ var FileSystem;
             this.treeElement.classList.add("treeEntryElement");
             this.element.entry = this;
             this.element.classList.add("entryElement");
+            this.element.draggable = true;
         }
         static deselectAll() {
             document.querySelectorAll(".entryElement[selected]").forEach(e => e.entry.selected = false);
@@ -184,8 +185,11 @@ var FileSystem;
                         }, 0);
                     }
                 });
+                let sizeValues = selected.filter(e => e.isFile()).map(e => e.size);
+                sizeValues.unshift(0);
+                let totalSize = FileEntry.parseSize(sizeValues.reduce((p, c) => p + c));
                 if (selected.length > 1) {
-                    entryinfo.append(`Selected: ${selected.length} items`, br(), `Selected size: ${FileEntry.parseSize(selected.filter(e => e.isFile()).map(e => e.size).reduce((p, c) => p + c))}`, hr(), deleteSelected);
+                    entryinfo.append(`Selected: ${selected.length} items`, br(), `Selected size: ${totalSize}`, hr(), deleteSelected);
                 }
             }, 0);
         }
@@ -223,7 +227,7 @@ var FileSystem;
                 alert("You cannot rename the root folder.");
                 return { success: false, reason: "You cannot rename the root folder." };
             }
-            if (!name) {
+            if (!newName) {
                 modal((m, cm) => {
                     let div = document.createElement("div");
                     let p = document.createElement("p");
@@ -294,6 +298,82 @@ var FileSystem;
                 });
             }
         }
+        async move(newPath, skipReload = false) {
+            if (this.path == "/") {
+                alert("You cannot move the root folder.");
+                return { success: false, reason: "You cannot move the root folder." };
+            }
+            if (!newPath) {
+                modal((m, cm) => {
+                    let div = document.createElement("div");
+                    let p = document.createElement("p");
+                    p.innerText = "Moving \"" + this.getName() + "\"...";
+                    let nameInput = document.createElement("input");
+                    nameInput.value = this.getName();
+                    let ext = "";
+                    if (this.isFile())
+                        ext = this.getExt();
+                    setTimeout(() => {
+                        nameInput.focus();
+                        nameInput.setSelectionRange(0, this.getName().length - (ext ? ext.length + 1 : 0));
+                        nameInput.style.fontSize = "24px";
+                        nameInput.style.width = "100%";
+                    }, 0);
+                    let create = document.createElement("button");
+                    create.innerText = "Move";
+                    create.addEventListener("click", async () => {
+                        let name = nameInput.value.trim();
+                        if (name != "") {
+                            cm();
+                            return await request("/operators/move.php", {
+                                "target": this.path,
+                                "newname": name
+                            }).then(res => {
+                                if (res.success) {
+                                    if (skipReload != true)
+                                        FileSystem.currentDirectory.open();
+                                }
+                                else {
+                                    alert(res.reason);
+                                }
+                                return res;
+                            });
+                        }
+                    });
+                    nameInput.addEventListener("keydown", e => {
+                        if (e.key == "Enter") {
+                            e.preventDefault();
+                            create.click();
+                        }
+                        else if (e.key == "Escape") {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            cancel.click();
+                        }
+                    });
+                    let cancel = document.createElement("button");
+                    cancel.innerText = "Cancel";
+                    cancel.addEventListener("click", () => cm());
+                    div.append(p, nameInput, document.createElement("br"), create, cancel);
+                    return div;
+                });
+            }
+            else {
+                return await request("/operators/move.php", {
+                    "target": this.path,
+                    "newpath": newPath
+                }).then(res => {
+                    if (res.success) {
+                        if (skipReload != true)
+                            FileSystem.currentDirectory.open();
+                    }
+                    else {
+                        alert(res.reason);
+                    }
+                    return res;
+                });
+            }
+        }
         async delete(skipReload = false) {
             if (this.path == "/") {
                 alert("You cannot delete the root folder.");
@@ -322,6 +402,51 @@ var FileSystem;
             super(path, FileType.Directory);
             this.entries = [];
             this.updateElement();
+            let dragDropCallback = async (et, e) => {
+                if (et == "dragenter" || et == "dragover" || et == "dragleave") {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+                let target = e.target;
+                while (!target.entry && target.parentElement) {
+                    target = target.parentElement;
+                }
+                if (et == "drop") {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    let selected;
+                    if (target.entry && target.entry.isDirectory()) {
+                        let files = FileSystem.fileListToArray(e.dataTransfer.files);
+                        if (files.length > 0) {
+                            let maxFiles = 5;
+                            let len = Math.ceil(files.length / maxFiles);
+                            for (let i = 0; i < len; i++) {
+                                const bulk = files.splice(0, maxFiles);
+                                console.log(i + "/" + len);
+                                console.log(bulk);
+                                await target.entry.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+                            }
+                            if (len > 0)
+                                target.entry.open();
+                        }
+                        else if (target && target.entry && (selected = Entry.getSelectedEntries()).length > 0 && selected.findIndex(s => s.path == target.entry.path) == -1) {
+                            for (let i = 0; i < selected.length; i++) {
+                                const s = selected[i];
+                                console.log(`Moving "${s.path}" to "${target.entry.path}/${s.getName()}"`);
+                                await s.move(target.entry.path + "/" + s.getName());
+                            }
+                            FileSystem.currentDirectory.open();
+                        }
+                    }
+                    document.querySelectorAll("[hover]").forEach(e => e.toggleAttribute("hover", false));
+                }
+                if (et == "dragenter")
+                    target.toggleAttribute("hover", true);
+                else if (et == "dragleave")
+                    target.toggleAttribute("hover", false);
+            };
+            detectDragDrop(this.treeElement, dragDropCallback);
+            detectDragDrop(this.element, dragDropCallback);
         }
         async newFolder(name) {
             if (!name) {
@@ -330,8 +455,12 @@ var FileSystem;
                     let p = document.createElement("p");
                     p.innerText = "Creating new folder in \"" + this.path + "\"";
                     let nameInput = document.createElement("input");
+                    nameInput.value = "New Folder";
                     setTimeout(() => {
                         nameInput.focus();
+                        nameInput.setSelectionRange(0, "New Folder".length);
+                        nameInput.style.fontSize = "24px";
+                        nameInput.style.width = "100%";
                     }, 0);
                     let create = document.createElement("button");
                     create.innerText = "Create";
@@ -347,7 +476,7 @@ var FileSystem;
                                 "name": name
                             }).then(async () => {
                                 await this.open();
-                                this.entries.find(e => e.getName() == name).open();
+                                // (this.entries.find(e => e.getName() == name) as DirectoryEntry).open()
                             });
                             cm();
                         }
@@ -441,7 +570,7 @@ var FileSystem;
                 treeDiv.addEventListener("contextmenu", e => {
                     e.preventDefault();
                     if (this.entries.length == 0) {
-                        this.open();
+                        this.open(true);
                         this.setDetails();
                     }
                     else
@@ -473,15 +602,31 @@ var FileSystem;
                 });
                 div.addEventListener("contextmenu", e => {
                     e.preventDefault();
-                    this.open();
+                    this.selected = e.ctrlKey ? !this.selected : true;
+                    this.setDetails();
                 });
                 div.addEventListener("click", e => {
                     e.stopPropagation();
                     e.preventDefault();
-                    this.setDetails();
                     if (!e.ctrlKey)
                         FileSystem.Entry.deselectAll();
-                    this.selected = e.ctrlKey ? !this.selected : true;
+                    if (!e.altKey)
+                        this.selected = e.ctrlKey ? !this.selected : true;
+                    this.setDetails();
+                    // let entries = FileSystem.Entry.getCurrentEntries();
+                    // let selectedEntries = FileSystem.Entry.getSelectedEntries();
+                    // if (selectedEntries.length > 0 && e.altKey && e.ctrlKey) {
+                    //   let firstId = entries.findIndex(e => e.path == selectedEntries[0].path);
+                    //   let lastId = entries.findIndex(e => e.path == selectedEntries[selectedEntries.length - 1].path);
+                    //   let curId = entries.findIndex(e => e.path == this.path);
+                    //   if (e.ctrlKey && e.altKey) {
+                    //     entries.forEach((entry, i) => {
+                    //       if ((firstId < curId && i > firstId && i <= curId) || (lastId > curId && i >= curId && i < lastId)) {
+                    //         entry.selected = !entry.selected;
+                    //       }
+                    //     });
+                    //   }
+                    // }
                 });
                 div.addEventListener("touchstart", e => {
                     if (e.touches.length == 2) {
@@ -500,18 +645,24 @@ var FileSystem;
                 }, 0);
             }
         }
-        async open() {
-            FileSystem.currentDirectory = this;
-            setUrl(this.path);
+        async open(stayInFolder = false) {
+            let go = !stayInFolder;
+            if (go) {
+                setUrl(this.path);
+                FileSystem.currentDirectory = this;
+            }
             if (this.entries.length == 0) {
                 this.treeElement.innerHTML = "";
                 this.treeElement.appendChild(loadingSpinner());
             }
             let fileContainer = document.getElementById("filecontainer");
-            fileContainer.innerHTML = "";
-            fileContainer.appendChild(loadingSpinner());
+            if (go) {
+                fileContainer.innerHTML = "";
+                fileContainer.appendChild(loadingSpinner());
+            }
             const entries = await readDirectory(this.path);
-            fileContainer.innerHTML = "";
+            if (go)
+                fileContainer.innerHTML = "";
             let difference = false;
             for (let i = 0; i < entries.length; i++) {
                 const e = entries[i];
@@ -521,7 +672,9 @@ var FileSystem;
                     continue;
                 }
                 e.parent = this;
-                fileContainer.appendChild(e.element);
+                if (go) {
+                    fileContainer.appendChild(e.element);
+                }
                 if (!thisE
                     || e.path != thisE.path
                     || e.type != thisE.type) {
@@ -619,7 +772,8 @@ var FileSystem;
                     this.setDetails();
                 });
                 treeDiv.addEventListener("contextmenu", e => {
-                    // e.preventDefault();
+                    e.preventDefault();
+                    this.open();
                 });
                 this.treeElement.appendChild(treeDiv);
                 setTimeout(() => {
@@ -640,15 +794,32 @@ var FileSystem;
                     this.open();
                 });
                 div.addEventListener("contextmenu", e => {
-                    // e.preventDefault();
+                    e.preventDefault();
+                    this.selected = e.ctrlKey ? !this.selected : true;
+                    this.setDetails();
                 });
                 div.addEventListener("click", e => {
                     e.stopPropagation();
                     e.preventDefault();
-                    this.setDetails();
                     if (!e.ctrlKey)
                         FileSystem.Entry.deselectAll();
-                    this.selected = e.ctrlKey ? !this.selected : true;
+                    if (!e.altKey)
+                        this.selected = e.ctrlKey ? !this.selected : true;
+                    this.setDetails();
+                    // let entries = FileSystem.Entry.getCurrentEntries();
+                    // let selectedEntries = FileSystem.Entry.getSelectedEntries();
+                    // if (selectedEntries.length > 0) {
+                    //   let firstId = entries.findIndex(e => e.path == selectedEntries[0].path);
+                    //   let lastId = entries.findIndex(e => e.path == selectedEntries[selectedEntries.length - 1].path);
+                    //   let curId = entries.findIndex(e => e.path == this.path);
+                    //   if (e.ctrlKey && e.altKey) {
+                    //     entries.forEach((entry, i) => {
+                    //       if ((firstId < curId && i > firstId && i <= curId) || (lastId > curId && i >= curId && i < lastId)) {
+                    //         entry.selected = !entry.selected;
+                    //       }
+                    //     });
+                    //   }
+                    // }
                 });
                 div.addEventListener("touchstart", e => {
                     if (e.touches.length == 2) {

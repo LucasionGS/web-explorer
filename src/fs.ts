@@ -85,6 +85,7 @@ namespace FileSystem {
       
       this.element.entry = this;
       this.element.classList.add("entryElement");
+      this.element.draggable = true;
     }
 
     getName() {
@@ -250,11 +251,14 @@ namespace FileSystem {
             }, 0);
           }
         });
+        let sizeValues = (selected.filter(e => e.isFile()) as FileEntry[]).map(e => e.size);
+        sizeValues.unshift(0);
+        let totalSize = FileEntry.parseSize(sizeValues.reduce((p, c) => p + c));
         if (selected.length > 1) {
           entryinfo.append(
             `Selected: ${selected.length} items`,
             br(),
-            `Selected size: ${FileEntry.parseSize((selected.filter(e => e.isFile()) as FileEntry[]).map(e => e.size).reduce((p, c) => p + c))}`,
+            `Selected size: ${totalSize}`,
             hr(),
             deleteSelected
           );
@@ -301,7 +305,7 @@ namespace FileSystem {
         return {success: false, reason: "You cannot rename the root folder."};
       }
 
-      if (!name) {
+      if (!newName) {
         modal((m, cm) => {
           let div = document.createElement("div");
           let p = document.createElement("p");
@@ -381,6 +385,93 @@ namespace FileSystem {
         });
       }
     }
+
+    async move(newPath?: string, skipReload = false) {
+      if (this.path == "/") {
+        alert("You cannot move the root folder.");
+        return {success: false, reason: "You cannot move the root folder."};
+      }
+
+      if (!newPath) {
+        modal((m, cm) => {
+          let div = document.createElement("div");
+          let p = document.createElement("p");
+          p.innerText = "Moving \""+ this.getName() +"\"...";
+          let nameInput = document.createElement("input");
+          nameInput.value = this.getName();
+          let ext = "";
+          if (this.isFile()) ext = this.getExt();
+          setTimeout(() => {
+            nameInput.focus();
+            nameInput.setSelectionRange(0, this.getName().length - (ext ? ext.length + 1 : 0))
+            nameInput.style.fontSize = "24px";
+            nameInput.style.width = "100%";
+          }, 0);
+          let create = document.createElement("button");
+          create.innerText = "Move";
+          create.addEventListener("click", async () => {
+            let name = nameInput.value.trim();
+            if (name != "") {
+              cm();
+              return await request<{success: boolean, reason?: string}>("/operators/move.php", {
+                "target": this.path,
+                "newname": name
+              }).then(res => {
+                if (res.success) {
+                  if (skipReload != true) currentDirectory.open();
+                }
+                else {
+                  alert(res.reason);
+                }
+        
+                return res;
+              });
+            }
+          });
+
+          nameInput.addEventListener("keydown", e => {
+            if (e.key == "Enter") {
+              e.preventDefault();
+              create.click();
+            }
+            else if (e.key == "Escape") {
+              e.stopPropagation();
+              e.preventDefault();
+              cancel.click();
+            }
+          });
+          
+          let cancel = document.createElement("button");
+          cancel.innerText = "Cancel";
+          cancel.addEventListener("click", () => cm());
+          
+          div.append(
+            p,
+            nameInput,
+            document.createElement("br"),
+            create,
+            cancel
+          );
+
+          return div;
+        });
+      }
+      else {
+        return await request<{success: boolean, reason?: string}>("/operators/move.php", {
+          "target": this.path,
+          "newpath": newPath
+        }).then(res => {
+          if (res.success) {
+            if (skipReload != true) currentDirectory.open();
+          }
+          else {
+            alert(res.reason);
+          }
+  
+          return res;
+        });
+      }
+    }
     
     async delete(skipReload = false) {
       if (this.path == "/") {
@@ -418,6 +509,54 @@ namespace FileSystem {
     constructor(path: string) {
       super(path, FileType.Directory);
       this.updateElement();
+
+      let dragDropCallback: (eventType: "dragstart" | "dragover" | "dragleave" | "dragenter" | "drop", evt: DragEvent) => void =
+      async (et, e) => {
+        if (et == "dragenter" || et == "dragover" || et == "dragleave") {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+        let target = (e.target as FileSystem.EntryElement);
+        while (!target.entry && target.parentElement) {
+          target = target.parentElement as FileSystem.EntryElement;
+        }
+        if (et == "drop") {
+          e.stopPropagation();
+          e.preventDefault();
+          let selected: Entry[];
+          if (target.entry && target.entry.isDirectory()) {
+            let files: File[] = FileSystem.fileListToArray(e.dataTransfer.files);
+            
+            if (files.length > 0) {
+              let maxFiles = 5;
+              let len = Math.ceil(files.length / maxFiles);
+              for (let i = 0; i < len; i++) {
+                const bulk = files.splice(0, maxFiles);
+                console.log(i + "/" + len);
+                console.log(bulk);
+                
+                await target.entry.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+              }
+
+              if (len > 0) target.entry.open();
+            }
+            else if (target && target.entry && (selected = Entry.getSelectedEntries()).length > 0 && selected.findIndex(s => s.path == target.entry.path) == -1) {
+              for (let i = 0; i < selected.length; i++) {
+                const s = selected[i];
+                console.log(`Moving "${s.path}" to "${target.entry.path}/${s.getName()}"`);
+                await s.move(target.entry.path + "/" + s.getName());
+              }
+              currentDirectory.open();
+            }
+          }
+          document.querySelectorAll("[hover]").forEach(e => e.toggleAttribute("hover", false))
+        }
+        
+        if (et == "dragenter") target.toggleAttribute("hover", true);
+        else if (et == "dragleave") target.toggleAttribute("hover", false);
+      }
+      detectDragDrop(this.treeElement, dragDropCallback);
+      detectDragDrop(this.element, dragDropCallback);
     }
 
     entries: Entry[] = [];
@@ -429,8 +568,12 @@ namespace FileSystem {
           let p = document.createElement("p");
           p.innerText = "Creating new folder in \""+ this.path +"\"";
           let nameInput = document.createElement("input");
+          nameInput.value = "New Folder";
           setTimeout(() => {
             nameInput.focus();
+            nameInput.setSelectionRange(0, "New Folder".length)
+            nameInput.style.fontSize = "24px";
+            nameInput.style.width = "100%";
           }, 0);
           let create = document.createElement("button");
           create.innerText = "Create";
@@ -447,7 +590,7 @@ namespace FileSystem {
                 "name": name
               }).then(async () => {
                 await this.open();
-                (this.entries.find(e => e.getName() == name) as DirectoryEntry).open()
+                // (this.entries.find(e => e.getName() == name) as DirectoryEntry).open()
               });
               cm();
             }
@@ -559,7 +702,7 @@ namespace FileSystem {
         treeDiv.addEventListener("contextmenu", e => {
           e.preventDefault();
           if (this.entries.length == 0) {
-            this.open();
+            this.open(true);
             this.setDetails();
           }
           else treeEntriesContainer.toggleAttribute("collapsed");
@@ -595,14 +738,29 @@ namespace FileSystem {
         });
         div.addEventListener("contextmenu", e => {
           e.preventDefault();
-          this.open();
+          this.selected = e.ctrlKey ? !this.selected : true;
+          this.setDetails();
         });
         div.addEventListener("click", e => {
           e.stopPropagation();
           e.preventDefault();
-          this.setDetails();
           if (!e.ctrlKey) FileSystem.Entry.deselectAll();
-          this.selected = e.ctrlKey ? !this.selected : true;
+          if (!e.altKey) this.selected = e.ctrlKey ? !this.selected : true;
+          this.setDetails();
+          // let entries = FileSystem.Entry.getCurrentEntries();
+          // let selectedEntries = FileSystem.Entry.getSelectedEntries();
+          // if (selectedEntries.length > 0 && e.altKey && e.ctrlKey) {
+          //   let firstId = entries.findIndex(e => e.path == selectedEntries[0].path);
+          //   let lastId = entries.findIndex(e => e.path == selectedEntries[selectedEntries.length - 1].path);
+          //   let curId = entries.findIndex(e => e.path == this.path);
+          //   if (e.ctrlKey && e.altKey) {
+          //     entries.forEach((entry, i) => {
+          //       if ((firstId < curId && i > firstId && i <= curId) || (lastId > curId && i >= curId && i < lastId)) {
+          //         entry.selected = !entry.selected;
+          //       }
+          //     });
+          //   }
+          // }
         });
         div.addEventListener("touchstart", e => {
           if (e.touches.length == 2) {
@@ -622,19 +780,27 @@ namespace FileSystem {
       }
     }
 
-    async open() {
-      currentDirectory = this;
-      setUrl(this.path);
+    async open(): Promise<Entry[]>;
+    async open(stayInFolder: boolean): Promise<Entry[]>;
+    async open(stayInFolder: boolean = false) {
+      let go = !stayInFolder;
+      if (go) {
+        setUrl(this.path);
+        currentDirectory = this;
+      }
+
       if (this.entries.length == 0) {
         this.treeElement.innerHTML = "";
         this.treeElement.appendChild(loadingSpinner());
       }
       let fileContainer = document.getElementById("filecontainer") as HTMLDivElement;
-      fileContainer.innerHTML = "";
-      fileContainer.appendChild(loadingSpinner());
+      if (go) {
+        fileContainer.innerHTML = "";
+        fileContainer.appendChild(loadingSpinner());
+      }
       
       const entries = await readDirectory(this.path);
-      fileContainer.innerHTML = "";
+      if (go) fileContainer.innerHTML = "";
       let difference: boolean = false;
       for (let i = 0; i < entries.length; i++) {
         const e = entries[i];
@@ -646,7 +812,9 @@ namespace FileSystem {
         }
 
         e.parent = this;
-        fileContainer.appendChild(e.element);
+        if (go) {
+          fileContainer.appendChild(e.element);
+        }
 
         if (!thisE
           || e.path != thisE.path
@@ -756,7 +924,8 @@ namespace FileSystem {
           this.setDetails();
         });
         treeDiv.addEventListener("contextmenu", e => {
-          // e.preventDefault();
+          e.preventDefault();
+          this.open();
         });
         this.treeElement.appendChild(treeDiv);
         
@@ -779,14 +948,30 @@ namespace FileSystem {
           this.open();
         });
         div.addEventListener("contextmenu", e => {
-          // e.preventDefault();
+          e.preventDefault();
+          this.selected = e.ctrlKey ? !this.selected : true;
+          this.setDetails();
         });
         div.addEventListener("click", e => {
           e.stopPropagation();
           e.preventDefault();
-          this.setDetails();
           if (!e.ctrlKey) FileSystem.Entry.deselectAll();
-          this.selected = e.ctrlKey ? !this.selected : true;
+          if (!e.altKey) this.selected = e.ctrlKey ? !this.selected : true;
+          this.setDetails();
+          // let entries = FileSystem.Entry.getCurrentEntries();
+          // let selectedEntries = FileSystem.Entry.getSelectedEntries();
+          // if (selectedEntries.length > 0) {
+          //   let firstId = entries.findIndex(e => e.path == selectedEntries[0].path);
+          //   let lastId = entries.findIndex(e => e.path == selectedEntries[selectedEntries.length - 1].path);
+          //   let curId = entries.findIndex(e => e.path == this.path);
+          //   if (e.ctrlKey && e.altKey) {
+          //     entries.forEach((entry, i) => {
+          //       if ((firstId < curId && i > firstId && i <= curId) || (lastId > curId && i >= curId && i < lastId)) {
+          //         entry.selected = !entry.selected;
+          //       }
+          //     });
+          //   }
+          // }
         });
         div.addEventListener("touchstart", e => {
           if (e.touches.length == 2) {

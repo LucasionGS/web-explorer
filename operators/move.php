@@ -2,12 +2,11 @@
 require_once("../config.php");
 $files = $config["files"];
 $target = $_REQUEST["target"];
-$newname = $_REQUEST["newname"];
-$newPath = dirname($target) . "/$newname";
+$newPath = $_REQUEST["newpath"];
 
 $root = $_SERVER["DOCUMENT_ROOT"];
 
-if (isset($target) && isset($newname) && trim($newname) != "") {
+if (isset($target) && isset($newPath) && trim($newPath) != "") {
   $target = $root . "/$files/" . $target;
   $newPath = $root . "/$files/" . $newPath;
   if (!file_exists($newPath)) {
@@ -21,9 +20,10 @@ if (isset($target) && isset($newname) && trim($newname) != "") {
 }
 
 require_once("./logToFile.php");
-logToFile("Renamed $target to $newPath | Success: $success");
+logToFile("Moved $target to $newPath | Success: $success");
 
 echo json_encode([
   "success" => $success,
   "reason" => $reason
 ]);
+

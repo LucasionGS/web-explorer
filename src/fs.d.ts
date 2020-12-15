@@ -32,6 +32,10 @@ declare namespace FileSystem {
             success: boolean;
             reason?: string;
         }>;
+        move(newPath?: string, skipReload?: boolean): Promise<{
+            success: boolean;
+            reason?: string;
+        }>;
         delete(skipReload?: boolean): Promise<void | {
             success: boolean;
             reason?: string;
@@ -51,6 +55,7 @@ declare namespace FileSystem {
         }>;
         updateElement(): void;
         open(): Promise<Entry[]>;
+        open(stayInFolder: boolean): Promise<Entry[]>;
     }
     class FileEntry extends Entry implements Openable {
         constructor(path: string);

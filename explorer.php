@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="/src/explorer.css">
   <link rel="stylesheet" href="/src/spinner.css">
-  <script src="/src/swipe.js"></script>
+  <script src="/src/utils.js"></script>
   <script src="/src/fs.js"></script>
   <script defer src="/src/explorer.js"></script>
   <title>File Explorer</title>

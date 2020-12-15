@@ -45,3 +45,20 @@ function detectSwipe(element, callback) {
         yDown = null;
     }
 }
+function detectDragDrop(element, callback) {
+    element.addEventListener("dragstart", e => {
+        callback("dragstart", e);
+    });
+    element.addEventListener("dragover", e => {
+        callback("dragover", e);
+    });
+    element.addEventListener("dragleave", e => {
+        callback("dragleave", e);
+    });
+    element.addEventListener("dragenter", e => {
+        callback("dragenter", e);
+    });
+    element.addEventListener("drop", async (e) => {
+        callback("drop", e);
+    });
+}

@@ -16,6 +16,10 @@ if (isset($target)) {
     $reason = !$success ? "Unable to remove folder." : null;
   }
 }
+
+require_once("./logToFile.php");
+logToFile("Deleted $target | Success: $success");
+
 echo json_encode([
   "success" => $success,
   "reason" => $reason

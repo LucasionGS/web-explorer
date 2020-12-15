@@ -10,7 +10,7 @@ RewriteRule download/(.*) /operators/download.php?target=$1 [L]
 
 # Explorer for getting data.
 RewriteCond %{REQUEST_URI} ^/explorer/(.*)
-RewriteRule explorer/(.*) explorer.html?dir=$1 [L]
+RewriteRule explorer/(.*) explorer.php?dir=$1 [L]
 
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME} !-f

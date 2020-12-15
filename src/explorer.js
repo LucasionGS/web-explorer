@@ -81,31 +81,35 @@ addEventListener("mousedown", e => {
 });
 //#region Drag and Drop, Deselect
 const filecontainer = document.getElementById("filecontainer");
-filecontainer.addEventListener("dragover", e => {
-    e.stopPropagation();
-    e.preventDefault();
-});
-filecontainer.addEventListener("dragleave", e => {
-    e.stopPropagation();
-    e.preventDefault();
-});
-filecontainer.addEventListener("dragenter", e => {
-    e.stopPropagation();
-    e.preventDefault();
-});
-filecontainer.addEventListener("drop", async (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    let files = FileSystem.fileListToArray(e.dataTransfer.files);
-    let maxFiles = 5;
-    let len = Math.ceil(files.length / maxFiles);
-    for (let i = 0; i < len; i++) {
-        const bulk = files.splice(0, maxFiles);
-        console.log(i + "/" + len);
-        console.log(bulk);
-        await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+detectDragDrop(filecontainer, async (et, e) => {
+    switch (et) {
+        case "dragover":
+        case "dragenter":
+        case "drop":
+            e.stopPropagation();
+            e.preventDefault();
+            break;
     }
-    FileSystem.currentDirectory.open();
+    if (et == "drop") {
+        let files = FileSystem.fileListToArray(e.dataTransfer.files);
+        let maxFiles = 5;
+        let len = Math.ceil(files.length / maxFiles);
+        for (let i = 0; i < len; i++) {
+            const bulk = files.splice(0, maxFiles);
+            console.log(i + "/" + len);
+            console.log(bulk);
+            await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+        }
+        if (len > 0)
+            FileSystem.currentDirectory.open();
+    }
+    else if (et == "dragstart") {
+        let target = e.target;
+        while (!target.entry && target.parentElement) {
+            target = target.parentElement;
+        }
+        target.entry.selected = true;
+    }
 });
 filecontainer.addEventListener("click", e => {
     e.stopPropagation();
