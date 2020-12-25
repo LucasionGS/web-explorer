@@ -19,18 +19,37 @@ namespace FileSystem {
   }
 
   function setUrl(path: string) {
+    path = path.replace(/\/\/+/g, "/");
     history.pushState("", "", "/explorer" + path);
     document.querySelector("title").innerText = "File Explorer | " + path;
   }
 
   export async function readDirectory(path: string) {
-    const entries = await request<{
+    interface EntryRaw {
       "type": number,
       "path": string,
       "physicalPath": string,
       "icon": string,
       "size": number,
-    }[]>("/files.php?dir=" + path);
+    }
+    let entries = await request<EntryRaw[]>("/files.php?dir=" + path);
+
+    let folders = entries.filter(e => e.type == FileType.Directory);
+    let files = entries.filter(e => e.type == FileType.File);
+
+    let sorter = (a: EntryRaw, b: EntryRaw) => {
+      let aName = a.path.toLowerCase()
+      let bName = b.path.toLowerCase()
+
+      if (aName > bName) return 1;
+      else if (aName < bName) return -1;
+      else return 0;
+    };
+
+    folders.sort(sorter);
+    files.sort(sorter);
+
+    entries = folders.concat(files)
     
     return entries.map(e => {
       var entry: Entry;
@@ -45,13 +64,8 @@ namespace FileSystem {
       if (entry.isFile()) {
         entry.size = e.size;
         
-        if (entry.isImage()) {
-          let _img = document.createElement("img");
-          _img.src = "/" + entry.physicalPath;
-          _img.addEventListener("load", () => {
-            entry.icon = "/" + entry.physicalPath;
-            (entry as FileEntry).updateElement();
-          });
+        if (entries.length <= 50 && entry.isImage()) {
+          entry.setIconToPreview();
         }
       }
 
@@ -59,7 +73,7 @@ namespace FileSystem {
     })
   }
 
-  async function request<JSONResponse = any>(path: string, data: {[key: string]: string | Blob} = {}): Promise<JSONResponse> {
+  async function request<JSONResponse = any>(path: string, data: {[key: string]: string | Blob} = {}, method: "GET" | "POST" = "POST"): Promise<JSONResponse> {
     data || (data = {});
     const fd = new FormData();
     for (const key in data) {
@@ -68,7 +82,7 @@ namespace FileSystem {
 
     const res = await fetch(path, {
       body: fd,
-      method: "POST"
+      method: method
     });
     return await res.json();
   }
@@ -120,12 +134,13 @@ namespace FileSystem {
           let files: File[] = FileSystem.fileListToArray(folderInput.files);
           let maxFiles = 5;
           let len = Math.ceil(files.length / maxFiles);
+          let totalFiles = files.length;
           for (let i = 0; i < len; i++) {
             const bulk = files.splice(0, maxFiles);
             console.log(i + "/" + len);
             console.log(bulk);
             
-            await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+            await FileSystem.currentDirectory.uploadFile(bulk, percent => `Uploading ${totalFiles} files...\n${(((100 / len) * i) + (percent / len)).toFixed(2)}%`);
           }
 
           FileSystem.currentDirectory.open();
@@ -145,12 +160,13 @@ namespace FileSystem {
           let files: File[] = FileSystem.fileListToArray(fileInput.files);
           let maxFiles = 5;
           let len = Math.ceil(files.length / maxFiles);
+          let totalFiles = files.length;
           for (let i = 0; i < len; i++) {
             const bulk = files.splice(0, maxFiles);
             console.log(i + "/" + len);
             console.log(bulk);
             
-            await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+            await FileSystem.currentDirectory.uploadFile(bulk, percent => `Uploading ${totalFiles} files...\n${(((100 / len) * i) + (percent / len)).toFixed(2)}%`);
           }
 
           FileSystem.currentDirectory.open();
@@ -530,23 +546,29 @@ namespace FileSystem {
             if (files.length > 0) {
               let maxFiles = 5;
               let len = Math.ceil(files.length / maxFiles);
+              let totalFiles = files.length;
               for (let i = 0; i < len; i++) {
                 const bulk = files.splice(0, maxFiles);
                 console.log(i + "/" + len);
                 console.log(bulk);
-                
-                await target.entry.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+                await target.entry.uploadFile(bulk, percent => `Uploading ${totalFiles} files...\n${(((100 / len) * i) + (percent / len)).toFixed(2)}%`);
               }
 
               if (len > 0) target.entry.open();
             }
-            else if (target && target.entry && (selected = Entry.getSelectedEntries()).length > 0 && selected.findIndex(s => s.path == target.entry.path) == -1) {
-              for (let i = 0; i < selected.length; i++) {
-                const s = selected[i];
-                console.log(`Moving "${s.path}" to "${target.entry.path}/${s.getName()}"`);
-                await s.move(target.entry.path + "/" + s.getName());
+            else if (target && target.entry && ((selected = Entry.getSelectedEntries()) || true) && selected.findIndex(s => s.path == target.entry.path) == -1) {
+              if (selected.length > 0)
+              {
+                for (let i = 0; i < selected.length; i++) {
+                  const s = selected[i];
+                  console.log(`Moving "${s.path}" to "${target.entry.path}/${s.getName()}"`);
+                  await s.move(target.entry.path + "/" + s.getName());
+                }
+                currentDirectory.open();
               }
-              currentDirectory.open();
+              else {
+                console.log(e);
+              }
             }
           }
           document.querySelectorAll("[hover]").forEach(e => e.toggleAttribute("hover", false))
@@ -577,6 +599,7 @@ namespace FileSystem {
           }, 0);
           let create = document.createElement("button");
           create.innerText = "Create";
+          create.classList.add("green");
           create.addEventListener("click", () => {
             let name = nameInput.value.trim();
             if (name != "") {
@@ -610,6 +633,7 @@ namespace FileSystem {
           
           let cancel = document.createElement("button");
           cancel.innerText = "Cancel";
+          cancel.classList.add("red");
           cancel.addEventListener("click", () => cm());
           
           div.append(
@@ -631,7 +655,7 @@ namespace FileSystem {
       }
     }
 
-    uploadFile(files: File[], message?: string) {
+    uploadFile(files: File[], message?: string | ((percentTotal: number, loaded: number, total: number) => string)) {
       let resolve: (value?: {success: boolean; reason?: string; } | PromiseLike<{success: boolean; reason?: string; }>) => void;
       let promise = new Promise<{success: boolean, reason?: string}>(res => resolve = res);
       if (files.length == 0) return;
@@ -659,8 +683,8 @@ namespace FileSystem {
       httpReq.upload.addEventListener('progress', function(e) {
         // upload progress as percentage
         let percent_completed = (e.loaded / e.total) * 100;
-        p.innerText = "Uploading... " + percent_completed.toFixed(2) + "%";
-        if (message) p.append(document.createElement("hr"), message);
+        p.innerText = (typeof message == "function") ? message(percent_completed, e.loaded, e.total) : "Uploading... " + percent_completed.toFixed(2) + "%";
+        if (typeof message == "string") p.append(document.createElement("hr"), message);
       });
 
       // request finished event
@@ -851,6 +875,7 @@ namespace FileSystem {
     }
 
     public size: number;
+    public previewImage: string = null;
 
     public static parseSize(size: number) {
       // In bytes originally.
@@ -865,6 +890,15 @@ namespace FileSystem {
 
     public parseSize() {
       return FileEntry.parseSize(this.size);
+    }
+
+    public setIconToPreview() {
+      let _img = document.createElement("img");
+      _img.src = "/" + this.physicalPath;
+      _img.addEventListener("load", () => {
+        (this as FileEntry).previewImage = "/" + this.physicalPath;
+        (this as FileEntry).updateElement();
+      });
     }
 
     getExt() {
@@ -955,6 +989,7 @@ namespace FileSystem {
         div.addEventListener("click", e => {
           e.stopPropagation();
           e.preventDefault();
+          if (!this.previewImage && this.isImage()) this.setIconToPreview();
           if (!e.ctrlKey) FileSystem.Entry.deselectAll();
           if (!e.altKey) this.selected = e.ctrlKey ? !this.selected : true;
           this.setDetails();
@@ -983,7 +1018,7 @@ namespace FileSystem {
 
         setTimeout(() => {
           const icon = document.createElement("img");
-          icon.src = this.icon;
+          icon.src = this.previewImage ? this.previewImage : this.icon;
           div.appendChild(icon);
           const p = document.createElement("p");
           p.innerText = this.getName();

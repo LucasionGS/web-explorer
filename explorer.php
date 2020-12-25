@@ -15,8 +15,9 @@
     <div id="filetree"></div>
     <div id="filecontainer"></div>
     <div id="filedetails">
-      <button id="back" onclick="if (FileSystem.currentDirectory.parent) FileSystem.currentDirectory.parent.open();">&LeftArrow;</button>
+      <button id="back" onclick="if (FileSystem.currentDirectory.parent) FileSystem.currentDirectory.parent.open();">&LeftArrow;----------</button>
       <div id="entryinfo"></div>
+      <p>Current User: <?php echo $_SERVER["PHP_AUTH_USER"]; ?></p>
     </div>
   </div>
 </body>

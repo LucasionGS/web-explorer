@@ -7,11 +7,27 @@ var FileSystem;
         FileType[FileType["File"] = 1] = "File";
     })(FileType || (FileType = {}));
     function setUrl(path) {
+        path = path.replace(/\/\/+/g, "/");
         history.pushState("", "", "/explorer" + path);
         document.querySelector("title").innerText = "File Explorer | " + path;
     }
     async function readDirectory(path) {
-        const entries = await request("/files.php?dir=" + path);
+        let entries = await request("/files.php?dir=" + path);
+        let folders = entries.filter(e => e.type == FileType.Directory);
+        let files = entries.filter(e => e.type == FileType.File);
+        let sorter = (a, b) => {
+            let aName = a.path.toLowerCase();
+            let bName = b.path.toLowerCase();
+            if (aName > bName)
+                return 1;
+            else if (aName < bName)
+                return -1;
+            else
+                return 0;
+        };
+        folders.sort(sorter);
+        files.sort(sorter);
+        entries = folders.concat(files);
         return entries.map(e => {
             var entry;
             if (e.type == FileType.Directory)
@@ -25,20 +41,15 @@ var FileSystem;
             entry.type = e.type;
             if (entry.isFile()) {
                 entry.size = e.size;
-                if (entry.isImage()) {
-                    let _img = document.createElement("img");
-                    _img.src = "/" + entry.physicalPath;
-                    _img.addEventListener("load", () => {
-                        entry.icon = "/" + entry.physicalPath;
-                        entry.updateElement();
-                    });
+                if (entries.length <= 50 && entry.isImage()) {
+                    entry.setIconToPreview();
                 }
             }
             return entry;
         });
     }
     FileSystem.readDirectory = readDirectory;
-    async function request(path, data = {}) {
+    async function request(path, data = {}, method = "POST") {
         data || (data = {});
         const fd = new FormData();
         for (const key in data) {
@@ -46,7 +57,7 @@ var FileSystem;
         }
         const res = await fetch(path, {
             body: fd,
-            method: "POST"
+            method: method
         });
         return await res.json();
     }
@@ -93,11 +104,12 @@ var FileSystem;
                     let files = FileSystem.fileListToArray(folderInput.files);
                     let maxFiles = 5;
                     let len = Math.ceil(files.length / maxFiles);
+                    let totalFiles = files.length;
                     for (let i = 0; i < len; i++) {
                         const bulk = files.splice(0, maxFiles);
                         console.log(i + "/" + len);
                         console.log(bulk);
-                        await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+                        await FileSystem.currentDirectory.uploadFile(bulk, percent => `Uploading ${totalFiles} files...\n${(((100 / len) * i) + (percent / len)).toFixed(2)}%`);
                     }
                     FileSystem.currentDirectory.open();
                 });
@@ -114,11 +126,12 @@ var FileSystem;
                     let files = FileSystem.fileListToArray(fileInput.files);
                     let maxFiles = 5;
                     let len = Math.ceil(files.length / maxFiles);
+                    let totalFiles = files.length;
                     for (let i = 0; i < len; i++) {
                         const bulk = files.splice(0, maxFiles);
                         console.log(i + "/" + len);
                         console.log(bulk);
-                        await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+                        await FileSystem.currentDirectory.uploadFile(bulk, percent => `Uploading ${totalFiles} files...\n${(((100 / len) * i) + (percent / len)).toFixed(2)}%`);
                     }
                     FileSystem.currentDirectory.open();
                 });
@@ -420,22 +433,28 @@ var FileSystem;
                         if (files.length > 0) {
                             let maxFiles = 5;
                             let len = Math.ceil(files.length / maxFiles);
+                            let totalFiles = files.length;
                             for (let i = 0; i < len; i++) {
                                 const bulk = files.splice(0, maxFiles);
                                 console.log(i + "/" + len);
                                 console.log(bulk);
-                                await target.entry.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+                                await target.entry.uploadFile(bulk, percent => `Uploading ${totalFiles} files...\n${(((100 / len) * i) + (percent / len)).toFixed(2)}%`);
                             }
                             if (len > 0)
                                 target.entry.open();
                         }
-                        else if (target && target.entry && (selected = Entry.getSelectedEntries()).length > 0 && selected.findIndex(s => s.path == target.entry.path) == -1) {
-                            for (let i = 0; i < selected.length; i++) {
-                                const s = selected[i];
-                                console.log(`Moving "${s.path}" to "${target.entry.path}/${s.getName()}"`);
-                                await s.move(target.entry.path + "/" + s.getName());
+                        else if (target && target.entry && ((selected = Entry.getSelectedEntries()) || true) && selected.findIndex(s => s.path == target.entry.path) == -1) {
+                            if (selected.length > 0) {
+                                for (let i = 0; i < selected.length; i++) {
+                                    const s = selected[i];
+                                    console.log(`Moving "${s.path}" to "${target.entry.path}/${s.getName()}"`);
+                                    await s.move(target.entry.path + "/" + s.getName());
+                                }
+                                FileSystem.currentDirectory.open();
                             }
-                            FileSystem.currentDirectory.open();
+                            else {
+                                console.log(e);
+                            }
                         }
                     }
                     document.querySelectorAll("[hover]").forEach(e => e.toggleAttribute("hover", false));
@@ -464,6 +483,7 @@ var FileSystem;
                     }, 0);
                     let create = document.createElement("button");
                     create.innerText = "Create";
+                    create.classList.add("green");
                     create.addEventListener("click", () => {
                         let name = nameInput.value.trim();
                         if (name != "") {
@@ -494,6 +514,7 @@ var FileSystem;
                     });
                     let cancel = document.createElement("button");
                     cancel.innerText = "Cancel";
+                    cancel.classList.add("red");
                     cancel.addEventListener("click", () => cm());
                     div.append(p, nameInput, document.createElement("br"), create, cancel);
                     return div;
@@ -530,8 +551,8 @@ var FileSystem;
             httpReq.upload.addEventListener('progress', function (e) {
                 // upload progress as percentage
                 let percent_completed = (e.loaded / e.total) * 100;
-                p.innerText = "Uploading... " + percent_completed.toFixed(2) + "%";
-                if (message)
+                p.innerText = (typeof message == "function") ? message(percent_completed, e.loaded, e.total) : "Uploading... " + percent_completed.toFixed(2) + "%";
+                if (typeof message == "string")
                     p.append(document.createElement("hr"), message);
             });
             // request finished event
@@ -693,6 +714,7 @@ var FileSystem;
     class FileEntry extends Entry {
         constructor(path) {
             super(path, FileType.File);
+            this.previewImage = null;
             this.updateElement();
         }
         async open() {
@@ -719,6 +741,14 @@ var FileSystem;
         }
         parseSize() {
             return FileEntry.parseSize(this.size);
+        }
+        setIconToPreview() {
+            let _img = document.createElement("img");
+            _img.src = "/" + this.physicalPath;
+            _img.addEventListener("load", () => {
+                this.previewImage = "/" + this.physicalPath;
+                this.updateElement();
+            });
         }
         getExt() {
             let extParts = this.getName().split(".");
@@ -801,6 +831,8 @@ var FileSystem;
                 div.addEventListener("click", e => {
                     e.stopPropagation();
                     e.preventDefault();
+                    if (!this.previewImage && this.isImage())
+                        this.setIconToPreview();
                     if (!e.ctrlKey)
                         FileSystem.Entry.deselectAll();
                     if (!e.altKey)
@@ -830,7 +862,7 @@ var FileSystem;
                 this.element.appendChild(div);
                 setTimeout(() => {
                     const icon = document.createElement("img");
-                    icon.src = this.icon;
+                    icon.src = this.previewImage ? this.previewImage : this.icon;
                     div.appendChild(icon);
                     const p = document.createElement("p");
                     p.innerText = this.getName();

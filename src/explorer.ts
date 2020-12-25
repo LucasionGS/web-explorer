@@ -3,7 +3,7 @@ dir.icon = "/src/icons/folder.png";
 document.getElementById("filetree").appendChild(dir.treeElement);
 const instantPath = location.pathname.substring("/explorer".length);
 let _initialEntries = dir.open();
-async function goToInstantPath(entriesPromise: Promise<FileSystem.Entry[]>, segments: string[]) {
+async function goToInstantPath(entriesPromise: PromiseLike<FileSystem.Entry[]>, segments: string[]) {
   let entries = await entriesPromise;
   
   segments.shift();
@@ -94,6 +94,12 @@ addEventListener("mousedown", e => {
     e.preventDefault();
     let p = FileSystem.currentDirectory.parent;
     if (p) p.open();
+
+    // history.back();
+    // setTimeout(() => {
+    //   const instantPath = location.pathname.substring("/explorer".length);
+    //   goToInstantPath(dir.open(), instantPath.split("/"));
+    // }, 100);
   }
 });
 
@@ -118,7 +124,7 @@ detectDragDrop(filecontainer, async (et, e) => {
       console.log(i + "/" + len);
       console.log(bulk);
       
-      await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+      await FileSystem.currentDirectory.uploadFile(bulk, percent => `${((100 / len) * i) + (percent / len)}%`);
     }
     
 
@@ -270,6 +276,7 @@ function modalPreviewMedia(fileEntry: FileSystem.FileEntry) {
       // Filters
       e.isImage() ||e.isVideo()
     )) as FileSystem.FileEntry[];
+    if (!fileEntry.previewImage) fileEntry.setIconToPreview();
 
     let mediaIndex = entries.findIndex(e => e.path == fileEntry.path);
     

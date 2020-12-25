@@ -49,7 +49,7 @@ declare namespace FileSystem {
         constructor(path: string);
         entries: Entry[];
         newFolder(name?: string): Promise<void>;
-        uploadFile(files: File[], message?: string): Promise<{
+        uploadFile(files: File[], message?: string | ((percentTotal: number, loaded: number, total: number) => string)): Promise<{
             success: boolean;
             reason?: string;
         }>;
@@ -61,8 +61,10 @@ declare namespace FileSystem {
         constructor(path: string);
         open(): Promise<void>;
         size: number;
+        previewImage: string;
         static parseSize(size: number): string;
         parseSize(): string;
+        setIconToPreview(): void;
         getExt(): string;
         isImage(): boolean;
         isVideo(): boolean;

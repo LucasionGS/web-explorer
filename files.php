@@ -58,15 +58,16 @@ $icons = [
   "png" => "/src/icons/png.png",
   "psd" => "/src/icons/psd.png",
   "mov" => "/src/icons/mov.png",
+  "mp4" => "/src/icons/mp4.png",
   "mp3" => "/src/icons/mp3.png",
 
   // Coding
-  "css" =>  "/src/icons/css.png",
-  "dll" =>  "/src/icons/dll.png",
-  
-  // HTML
   "htm" =>  "/src/icons/htm.png",
   "html" => "/src/icons/html.png",
+  "php" => "/src/icons/php.png",
+  "css" =>  "/src/icons/css.png",
+  "dll" =>  "/src/icons/dll.png",
+  "json" =>  "/src/icons/json.png",
   
   // Compressed
   "zip" =>  "/src/icons/zip.png",
@@ -105,11 +106,13 @@ interface InteractableEntry {
 class DirectoryEntry extends Entry
 {
   public function __construct(string $directoryPath) {
+    global $filesPath;
     $this->physicalPath = encodeFullUrl($directoryPath);
     $_t = explode("/", $directoryPath);
-    array_shift($_t);
+    $root = array_shift($_t);
 
     $this->path = "/" . implode("/", $_t);
+    $this->path = "/" . substr(implode("/", $_t), max(0, strlen($filesPath) - strlen($root) - 1));
     $this->icon = "/src/icons/folder.png";
     $this->type = 0;
   }
@@ -118,14 +121,15 @@ class DirectoryEntry extends Entry
 class FileEntry extends Entry
 {
   public function __construct(string $filePath) {
-    global $icons;
+    global $icons, $filesPath;
     $this->physicalPath = encodeFullUrl($filePath);
     $_t = explode("/", $filePath);
-    array_shift($_t);
-    $this->size = filesize($filePath);
-
+    $root = array_shift($_t);
+    
     $this->path = "/" . implode("/", $_t);
+    $this->path = "/" . substr(implode("/", $_t), max(0, strlen($filesPath) - strlen($root) - 1));
     $this->type = 1;
+    $this->size = filesize($filePath);
     $ext = pathinfo($filePath)['extension'];
     if ($icons[$ext] != null) {
       $this->icon = $icons[$ext];
@@ -150,13 +154,14 @@ for ($i = ($files[0] == ".." ? 1 : 0); $i < count($files); $i++) {
 }
 $total = $files[0] == ".." ? count($files) - 1 : count($files);
 
-usort($entries, function($a, $b) {
-  return strtolower($a->path) > strtolower($b->path);
-});
+// usort($entries, function($a, $b) {
+//   return $a->type > $b->type;
+// });
 
-usort($entries, function($a, $b) {
-  return $a->type > $b->type;
-});
+// usort($entries, function($a, $b) {
+//   return strtolower($a->path) - strtolower($b->path);
+// });
+
 
 if ($files[0] == "..") {
   array_unshift($entries, new DirectoryEntry(

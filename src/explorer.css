@@ -84,6 +84,10 @@ body {
   /* height: 128px; */
 }
 
+.entryElement:active {
+  opacity: 0.5;
+}
+
 .entryElement[selected] .entryItem {
   background-color: rgba(0, 255, 119, 0.7);
   border-radius: 10px;
@@ -115,7 +119,8 @@ body {
 
 #filedetails {
   flex: 1;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   word-wrap: break-word;
 }
 
@@ -126,6 +131,8 @@ body {
 }
 
 .largepreviewmedia {
+  display: block;
+  margin: auto;
   max-width: 90vw;
   max-height: 80vh;
 }
@@ -161,4 +168,22 @@ body {
   #filedetails[collapsed] {
     flex: 1;
   }
+}
+
+button {
+  font-size: 16px;
+  background-color: #2c2c2c;
+  color: white;
+  border-radius: 3px;
+  border: solid 1px white;
+  margin: 2px;
+  padding: 4px;
+}
+
+button.green {
+  background-color: #059000;
+}
+
+button.red {
+  background-color: #900000;
 }

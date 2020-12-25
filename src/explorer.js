@@ -77,6 +77,11 @@ addEventListener("mousedown", e => {
         let p = FileSystem.currentDirectory.parent;
         if (p)
             p.open();
+        // history.back();
+        // setTimeout(() => {
+        //   const instantPath = location.pathname.substring("/explorer".length);
+        //   goToInstantPath(dir.open(), instantPath.split("/"));
+        // }, 100);
     }
 });
 //#region Drag and Drop, Deselect
@@ -98,7 +103,7 @@ detectDragDrop(filecontainer, async (et, e) => {
             const bulk = files.splice(0, maxFiles);
             console.log(i + "/" + len);
             console.log(bulk);
-            await FileSystem.currentDirectory.uploadFile(bulk, (len > 1 ? "Bulk " + i + "/" + len : null));
+            await FileSystem.currentDirectory.uploadFile(bulk, percent => `${((100 / len) * i) + (percent / len)}%`);
         }
         if (len > 0)
             FileSystem.currentDirectory.open();
@@ -228,6 +233,8 @@ function modalPreviewMedia(fileEntry) {
         const entries = fileEntry.parent.entries.filter(e => e.isFile() && (
         // Filters
         e.isImage() || e.isVideo()));
+        if (!fileEntry.previewImage)
+            fileEntry.setIconToPreview();
         let mediaIndex = entries.findIndex(e => e.path == fileEntry.path);
         let div = document.createElement("div");
         let close = document.createElement("button");
