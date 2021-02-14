@@ -3,3 +3,4 @@ favicon.ico
 .htpasswd
 logs.txt
 userRoots.php
+node_modules

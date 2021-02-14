@@ -51,22 +51,66 @@ var FileSystem;
     FileSystem.readDirectory = readDirectory;
     async function request(path, data = {}, method = "POST") {
         data || (data = {});
-        const fd = new FormData();
-        for (const key in data) {
-            fd.append(key, data[key]);
+        switch (method) {
+            case "FORM-GET":
+            case "FORM-POST":
+                method = method.substring(5);
+                let form = document.createElement("form");
+                form.hidden = true;
+                document.body.append(form);
+                form.action = path;
+                form.method = method;
+                for (const key in data) {
+                    let value = data[key];
+                    if (Array.isArray(value)) {
+                        for (let i = 0; i < value.length; i++) {
+                            const v = value[i];
+                            const inp = document.createElement("input");
+                            inp.name = key + "[]";
+                            inp.value = v;
+                            form.append(inp);
+                        }
+                    }
+                    else if (typeof value == "string") {
+                        const inp = document.createElement("input");
+                        inp.name = key;
+                        inp.value = value;
+                        form.append(inp);
+                    }
+                    form.submit();
+                    form.remove();
+                }
+                return {};
+            default: {
+                const fd = new FormData();
+                for (const key in data) {
+                    let value = data[key];
+                    if (Array.isArray(value)) {
+                        for (let i = 0; i < value.length; i++) {
+                            const v = value[i];
+                            fd.append(key + "[]", v);
+                        }
+                    }
+                    else {
+                        fd.append(key, value);
+                    }
+                }
+                const res = await fetch(path, {
+                    body: fd,
+                    method: method
+                });
+                return await res.json();
+            }
         }
-        const res = await fetch(path, {
-            body: fd,
-            method: method
-        });
-        return await res.json();
     }
+    FileSystem.request = request;
     class Entry {
         constructor(path, type) {
             this.path = path;
             this.type = type;
             this.element = document.createElement("div");
             this.treeElement = document.createElement("div");
+            this.path = this.path.replace(/\/\/+/g, "/");
             this.treeElement.entry = this;
             this.treeElement.classList.add("treeEntryElement");
             this.element.entry = this;
@@ -152,7 +196,9 @@ var FileSystem;
                 });
                 entryinfo.append(br(), renameEntry, br(), deleteEntry, hr());
                 if (this.isDirectory()) {
-                    entryinfo.append(`Files: ${this.entries.length > 0 ? this.entries.length : "Load folder to display.."}`, hr());
+                    this.read().then(es => {
+                        entryinfo.append(hr(), `Items: ${es.length}`);
+                    });
                 }
             }
             entryinfo.append("Full Path: " + this.path, hr(), "Name: " + this.getName(), hr());
@@ -165,7 +211,7 @@ var FileSystem;
                 if (this.isImage()) {
                     // Editor
                     let img = document.createElement("img");
-                    img.src = "/" + this.physicalPath;
+                    img.src = this.view();
                     img.classList.add("previewimage");
                     entryinfo.append(img, hr());
                 }
@@ -190,7 +236,7 @@ var FileSystem;
                 let deleteSelected = document.createElement("button");
                 deleteSelected.innerText = "Delete selected";
                 deleteSelected.addEventListener("click", async () => {
-                    let selected = FileSystem.Entry.getSelectedEntries();
+                    // let selected = FileSystem.Entry.getSelectedEntries();
                     if (selected.length > 0 && confirm(`Are you sure you want to delete ${selected.length} files?`)) {
                         await FileSystem.Entry.bulkDelete(selected);
                         setTimeout(() => {
@@ -198,11 +244,55 @@ var FileSystem;
                         }, 0);
                     }
                 });
+                let zipSeleted = document.createElement("button");
+                let zipText = "Zip & download selected";
+                zipSeleted.innerText = zipText;
+                zipSeleted.addEventListener("click", async () => {
+                    zipSeleted.innerHTML = "";
+                    zipSeleted.append(loadingSpinner());
+                    // let selected = FileSystem.Entry.getSelectedEntries();
+                    let allFiles = [];
+                    async function addFilestoZip(files) {
+                        for (let i = 0; i < files.length; i++) {
+                            const file = files[i];
+                            if (file.element.isConnected) {
+                                file.element.innerHTML = "";
+                                file.element.append(loadingSpinner());
+                            }
+                            if (file.isFile()) {
+                                allFiles.push(file);
+                            }
+                            else if (file.isDirectory()) {
+                                await addFilestoZip(await file.read());
+                            }
+                        }
+                        console.log(allFiles.length);
+                    }
+                    await addFilestoZip(selected);
+                    await zip(allFiles).then(console.log);
+                    zipSeleted.innerText = zipText;
+                    selected.forEach(file => {
+                        if (file.element.isConnected) {
+                            file.updateElement();
+                        }
+                    });
+                });
                 let sizeValues = selected.filter(e => e.isFile()).map(e => e.size);
                 sizeValues.unshift(0);
                 let totalSize = FileEntry.parseSize(sizeValues.reduce((p, c) => p + c));
                 if (selected.length > 1) {
-                    entryinfo.append(`Selected: ${selected.length} items`, br(), `Selected size: ${totalSize}`, hr(), deleteSelected);
+                    entryinfo.append(`Selected: ${selected.length} items`, br(), `Selected size: ${totalSize}`, hr(), zipSeleted, deleteSelected);
+                }
+                else if (selected.length == 1 && selected[0].isDirectory()) {
+                    entryinfo.append(zipSeleted);
+                }
+                else if (selected.length == 1 && selected[0].isFile()) {
+                    let openButton = document.createElement("button");
+                    openButton.innerText = "Open";
+                    openButton.addEventListener("click", async () => {
+                        window.open(selected[0].view(), "_blank");
+                    });
+                    entryinfo.append(openButton);
                 }
             }, 0);
         }
@@ -227,12 +317,25 @@ var FileSystem;
             return [...document.querySelectorAll(".entryElement[selected]")].map(e => e.entry);
         }
         static async bulkDelete(bulk) {
-            let fc = document.querySelector("#filecontainer");
-            fc.innerHTML = "";
-            fc.appendChild(FileSystem.loadingSpinner());
+            // let fc = document.querySelector("#filecontainer");
+            // fc.innerHTML = "";
+            // fc.appendChild(FileSystem.loadingSpinner());
+            for (let i = 0; i < bulk.length; i++) {
+                const file = bulk[i];
+                if (file.isDirectory() && (await file.read()).length > 0) {
+                    if (confirm("One or more folders are not empty and all contents will be delete from inside of them, are you sure you want to delete these folder(s)?")) {
+                        break;
+                    }
+                    else {
+                        return;
+                    }
+                }
+            }
             for (let i = 0; i < bulk.length; i++) {
                 const e = bulk[i];
-                await e.delete(true);
+                e.element.innerHTML = "";
+                e.element.appendChild(FileSystem.loadingSpinner());
+                await e.delete(true, true);
             }
         }
         async rename(newName, skipReload = false) {
@@ -387,18 +490,36 @@ var FileSystem;
                 });
             }
         }
-        async delete(skipReload = false) {
+        async delete(skipReload = false, forceFolders = false) {
             if (this.path == "/") {
                 alert("You cannot delete the root folder.");
                 return { success: false, reason: "You cannot delete the root folder." };
             }
-            if (this.isDirectory() && this.entries.length > 0) {
-                return alert("You cannot delete folder \"" + this.getName() + "\", as it is not empty.");
+            if (this.isDirectory() && (await this.read()).length > 0) {
+                if (forceFolders || confirm("\"" + this.getName() + "\" folder is not empty and all contents will be delete from inside of it, are you sure you want to delete this folder?")) {
+                    async function removeFilesAndFolders(files) {
+                        for (let i = 0; i < files.length; i++) {
+                            const file = files[i];
+                            if (file.isDirectory()) {
+                                await removeFilesAndFolders(await file.read());
+                            }
+                            await file.delete(true);
+                        }
+                    }
+                    await removeFilesAndFolders(await this.read());
+                }
+                else
+                    return;
+                // return alert("You cannot delete folder \""+ this.getName() +"\", as it is not empty.");
             }
             return await request("/operators/delete.php", {
                 "target": this.path
             }).then(res => {
                 if (res.success) {
+                    if (this.element.isConnected)
+                        this.element.remove();
+                    if (this.treeElement.isConnected)
+                        this.treeElement.remove();
                     if (skipReload != true)
                         this.parent.open();
                 }
@@ -666,6 +787,12 @@ var FileSystem;
                 }, 0);
             }
         }
+        /**
+         * Returns all entries of this folder.
+         */
+        async read() {
+            return await readDirectory(this.path);
+        }
         async open(stayInFolder = false) {
             let go = !stayInFolder;
             if (go) {
@@ -681,7 +808,7 @@ var FileSystem;
                 fileContainer.innerHTML = "";
                 fileContainer.appendChild(loadingSpinner());
             }
-            const entries = await readDirectory(this.path);
+            const entries = await this.read();
             if (go)
                 fileContainer.innerHTML = "";
             let difference = false;
@@ -717,12 +844,18 @@ var FileSystem;
             this.previewImage = null;
             this.updateElement();
         }
+        /**
+         * Get view URL
+         */
+        view() {
+            return "/view/" + btoa(this.path);
+        }
         async open() {
             if (this.isImage() || this.isVideo()) {
                 modalPreviewMedia(this);
                 return;
             }
-            location.href = "/" + this.physicalPath;
+            location.href = this.view();
         }
         static parseSize(size) {
             // In bytes originally.
@@ -744,9 +877,9 @@ var FileSystem;
         }
         setIconToPreview() {
             let _img = document.createElement("img");
-            _img.src = "/" + this.physicalPath;
+            _img.src = this.view();
             _img.addEventListener("load", () => {
-                this.previewImage = "/" + this.physicalPath;
+                this.previewImage = this.view();
                 this.updateElement();
             });
         }
@@ -925,4 +1058,11 @@ var FileSystem;
         return files;
     }
     FileSystem.fileListToArray = fileListToArray;
+    function zip(entries) {
+        // return request("/object.php", {
+        return request("/operators/zip.php", {
+            targets: entries.map(e => e.path)
+        }, "FORM-POST");
+    }
+    FileSystem.zip = zip;
 })(FileSystem || (FileSystem = {}));

@@ -14,6 +14,11 @@ declare namespace FileSystem {
         File = 1
     }
     function readDirectory(path: string): Promise<Entry[]>;
+    function request<JSONResponse extends {
+        [key: string]: any;
+    } = any>(path: string, data?: {
+        [key: string]: string | string[] | Blob;
+    }, method?: "GET" | "POST" | "FORM-GET" | "FORM-POST"): Promise<JSONResponse>;
     class Entry {
         path: string;
         type: FileType;
@@ -36,7 +41,7 @@ declare namespace FileSystem {
             success: boolean;
             reason?: string;
         }>;
-        delete(skipReload?: boolean): Promise<void | {
+        delete(skipReload?: boolean, forceFolders?: boolean): Promise<{
             success: boolean;
             reason?: string;
         }>;
@@ -54,11 +59,19 @@ declare namespace FileSystem {
             reason?: string;
         }>;
         updateElement(): void;
+        /**
+         * Returns all entries of this folder.
+         */
+        read(): Promise<Entry[]>;
         open(): Promise<Entry[]>;
         open(stayInFolder: boolean): Promise<Entry[]>;
     }
     class FileEntry extends Entry implements Openable {
         constructor(path: string);
+        /**
+         * Get view URL
+         */
+        view(): string;
         open(): Promise<void>;
         size: number;
         previewImage: string;
@@ -75,4 +88,5 @@ declare namespace FileSystem {
     function loadingSpinner(): HTMLDivElement;
     function traverseDirectory(entry: any): Promise<{}>;
     function fileListToArray(fileList: FileList): File[];
+    function zip(entries: Entry[]): Promise<any>;
 }

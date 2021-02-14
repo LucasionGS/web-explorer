@@ -73,18 +73,68 @@ namespace FileSystem {
     })
   }
 
-  async function request<JSONResponse = any>(path: string, data: {[key: string]: string | Blob} = {}, method: "GET" | "POST" = "POST"): Promise<JSONResponse> {
+  export async function request<JSONResponse extends {[key: string]: any} = any>(
+    path: string,
+    data: {[key: string]: string | string[] | Blob} = {},
+    method: "GET" | "POST" | "FORM-GET" | "FORM-POST" = "POST"
+  ): Promise<JSONResponse> {
     data || (data = {});
-    const fd = new FormData();
-    for (const key in data) {
-      fd.append(key, data[key]);
-    }
 
-    const res = await fetch(path, {
-      body: fd,
-      method: method
-    });
-    return await res.json();
+    switch (method) {
+      case "FORM-GET":
+      case "FORM-POST":
+        method = method.substring(5) as any;
+
+        let form = document.createElement("form");
+        form.hidden = true;
+        document.body.append(form);
+        form.action = path;
+        form.method = method;
+        for (const key in data) {
+          let value = data[key];
+          if (Array.isArray(value)) {
+            for (let i = 0; i < value.length; i++) {
+              const v = value[i];
+              const inp = document.createElement("input");
+              inp.name = key + "[]";
+              inp.value = v;
+              form.append(inp);
+            }
+          }
+          else if (typeof value == "string") {
+            const inp = document.createElement("input");
+            inp.name = key;
+            inp.value = value;
+            form.append(inp);
+          }
+
+          form.submit();
+          form.remove();
+        }
+        return ({} as any);
+    
+      default: {
+        const fd = new FormData();
+        for (const key in data) {
+          let value = data[key];
+          if (Array.isArray(value)) {
+            for (let i = 0; i < value.length; i++) {
+              const v = value[i];
+              fd.append(key + "[]", v);
+            }
+          }
+          else {
+            fd.append(key, value);
+          }
+        }
+
+        const res = await fetch(path, {
+          body: fd,
+          method: method
+        });
+        return await res.json();
+      }
+    }
   }
 
   export class Entry
@@ -94,6 +144,7 @@ namespace FileSystem {
     }
     parent: DirectoryEntry;
     constructor(public path: string, public type: FileType) {
+      this.path = this.path.replace(/\/\/+/g, "/");
       this.treeElement.entry = this;
       this.treeElement.classList.add("treeEntryElement");
       
@@ -205,10 +256,12 @@ namespace FileSystem {
           hr(),
         );
         if (this.isDirectory()) {
-          entryinfo.append(
-            `Files: ${this.entries.length > 0 ? this.entries.length : "Load folder to display.."}`,
-            hr(),
-          )
+          this.read().then(es => {
+            entryinfo.append(
+              hr(),
+              `Items: ${es.length}`,
+            )
+          });
         }
       }
 
@@ -232,7 +285,7 @@ namespace FileSystem {
         if (this.isImage()) {
           // Editor
           let img = document.createElement("img");
-          img.src = "/" + this.physicalPath;
+          img.src = this.view();
           img.classList.add("previewimage");
           entryinfo.append(img, hr());
         }
@@ -258,7 +311,7 @@ namespace FileSystem {
         let deleteSelected = document.createElement("button");
         deleteSelected.innerText = "Delete selected";
         deleteSelected.addEventListener("click", async () => {
-          let selected = FileSystem.Entry.getSelectedEntries();
+          // let selected = FileSystem.Entry.getSelectedEntries();
           if (selected.length > 0 && confirm(`Are you sure you want to delete ${selected.length} files?`)) {
             await FileSystem.Entry.bulkDelete(selected);
 
@@ -266,6 +319,43 @@ namespace FileSystem {
               FileSystem.currentDirectory.open();
             }, 0);
           }
+        });
+        
+        let zipSeleted = document.createElement("button");
+        let zipText = "Zip & download selected";
+        zipSeleted.innerText = zipText;
+        zipSeleted.addEventListener("click", async () => {
+          zipSeleted.innerHTML = "";
+          zipSeleted.append(loadingSpinner());
+
+          // let selected = FileSystem.Entry.getSelectedEntries();
+          let allFiles: FileEntry[] = [];
+          async function addFilestoZip(files: Entry[]) {
+            for (let i = 0; i < files.length; i++) {
+              const file = files[i];
+              if (file.element.isConnected) {
+                file.element.innerHTML = "";
+                file.element.append(loadingSpinner());
+              }
+              if (file.isFile()) {
+                allFiles.push(file);
+              }
+              else if (file.isDirectory()) {
+                await addFilestoZip(await file.read());
+              }
+            }
+
+            console.log(allFiles.length);
+          }
+          await addFilestoZip(selected);
+
+          await zip(allFiles).then(console.log);
+          zipSeleted.innerText = zipText;
+          selected.forEach(file => {
+            if (file.element.isConnected) {
+              (file as FileEntry).updateElement();
+            }
+          })
         });
         let sizeValues = (selected.filter(e => e.isFile()) as FileEntry[]).map(e => e.size);
         sizeValues.unshift(0);
@@ -276,7 +366,23 @@ namespace FileSystem {
             br(),
             `Selected size: ${totalSize}`,
             hr(),
-            deleteSelected
+            zipSeleted,
+            deleteSelected,
+          );
+        }
+        else if (selected.length == 1 && selected[0].isDirectory()) {
+          entryinfo.append(
+            zipSeleted
+          );
+        }
+        else if (selected.length == 1 && selected[0].isFile()) {
+          let openButton = document.createElement("button");
+          openButton.innerText = "Open";
+          openButton.addEventListener("click", async () => {
+            window.open((selected[0] as FileEntry).view(), "_blank");
+          });
+          entryinfo.append(
+            openButton
           );
         }
       }, 0);
@@ -306,12 +412,27 @@ namespace FileSystem {
     }
 
     public static async bulkDelete(bulk: Entry[]) {
-      let fc = document.querySelector("#filecontainer");
-      fc.innerHTML = "";
-      fc.appendChild(FileSystem.loadingSpinner());
+      // let fc = document.querySelector("#filecontainer");
+      // fc.innerHTML = "";
+      // fc.appendChild(FileSystem.loadingSpinner());
+
+      for (let i = 0; i < bulk.length; i++) {
+        const file = bulk[i];
+        if (file.isDirectory() && (await file.read()).length > 0) {
+          if (confirm("One or more folders are not empty and all contents will be delete from inside of them, are you sure you want to delete these folder(s)?")) {
+            break;
+          }
+          else {
+            return;
+          }
+        }
+      }
+
       for (let i = 0; i < bulk.length; i++) {
         const e = bulk[i];
-        await e.delete(true);
+        e.element.innerHTML = "";
+        e.element.appendChild(FileSystem.loadingSpinner());
+        await e.delete(true, true);
       }
     }
 
@@ -489,20 +610,35 @@ namespace FileSystem {
       }
     }
     
-    async delete(skipReload = false) {
+    async delete(skipReload = false, forceFolders = false) {
       if (this.path == "/") {
         alert("You cannot delete the root folder.");
         return {success: false, reason: "You cannot delete the root folder."};
       }
 
-      if (this.isDirectory() && this.entries.length > 0) {
-        return alert("You cannot delete folder \""+ this.getName() +"\", as it is not empty.");
+      if (this.isDirectory() && (await this.read()).length > 0) {
+        if (forceFolders || confirm("\""+ this.getName() +"\" folder is not empty and all contents will be delete from inside of it, are you sure you want to delete this folder?")) {
+          async function removeFilesAndFolders(files: Entry[]) {
+            for (let i = 0; i < files.length; i++) {
+              const file = files[i];
+              if (file.isDirectory()) {
+                await removeFilesAndFolders(await file.read());
+              }
+              await file.delete(true);
+            }
+          }
+          await removeFilesAndFolders(await this.read());
+        }
+        else return;
+        // return alert("You cannot delete folder \""+ this.getName() +"\", as it is not empty.");
       }
 
       return await request<{success: boolean, reason?: string}>("/operators/delete.php", {
         "target": this.path
       }).then(res => {
         if (res.success) {
+          if (this.element.isConnected) this.element.remove();
+          if (this.treeElement.isConnected) this.treeElement.remove();
           if (skipReload != true) this.parent.open();
         }
         else {
@@ -804,6 +940,13 @@ namespace FileSystem {
       }
     }
 
+    /**
+     * Returns all entries of this folder.
+     */
+    async read() {
+      return await readDirectory(this.path);
+    }
+
     async open(): Promise<Entry[]>;
     async open(stayInFolder: boolean): Promise<Entry[]>;
     async open(stayInFolder: boolean = false) {
@@ -823,7 +966,7 @@ namespace FileSystem {
         fileContainer.appendChild(loadingSpinner());
       }
       
-      const entries = await readDirectory(this.path);
+      const entries = await this.read();
       if (go) fileContainer.innerHTML = "";
       let difference: boolean = false;
       for (let i = 0; i < entries.length; i++) {
@@ -866,12 +1009,19 @@ namespace FileSystem {
       this.updateElement();
     }
 
+    /**
+     * Get view URL
+     */
+    view() {
+      return "/view/" + btoa(this.path);
+    }
+
     async open() {
       if (this.isImage() || this.isVideo()) {
         modalPreviewMedia(this);
         return;
       }
-      location.href = "/" + this.physicalPath;
+      location.href = this.view();
     }
 
     public size: number;
@@ -894,9 +1044,9 @@ namespace FileSystem {
 
     public setIconToPreview() {
       let _img = document.createElement("img");
-      _img.src = "/" + this.physicalPath;
+      _img.src = this.view();
       _img.addEventListener("load", () => {
-        (this as FileEntry).previewImage = "/" + this.physicalPath;
+        (this as FileEntry).previewImage = this.view();
         (this as FileEntry).updateElement();
       });
     }
@@ -1077,5 +1227,13 @@ namespace FileSystem {
     }
 
     return files;
+  }
+  
+  export function zip(entries: Entry[]) {
+
+    // return request("/object.php", {
+    return request("/operators/zip.php", {
+      targets: entries.map(e => e.path)
+    }, "FORM-POST");
   }
 }

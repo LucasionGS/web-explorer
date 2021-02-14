@@ -3,7 +3,7 @@ require_once("./config.php");
 $filesPath = $config["files"];
 define("IS_DIR", 1);
 define("IS_FILE", 2);
-$_DIR = trim($_REQUEST["dir"], "/");
+$_DIR = trim(isset($_REQUEST["dir"]) ? $_REQUEST["dir"] : "", "/");
 $dir = $filesPath . "/" . $_DIR;
 $dir = trim($dir, "/");
 $dirSections = explode("/", $dir);
@@ -142,7 +142,7 @@ class FileEntry extends Entry
  * @var (DirectoryEntry|FileEntry)[]
  */
 $entries = [];
-for ($i = ($files[0] == ".." ? 1 : 0); $i < count($files); $i++) {
+for ($i = (isset($files[0]) && $files[0] == ".." ? 1 : 0); $i < count($files); $i++) {
   if ($files[$i] == ".") continue;
   $file = $dir . "/" .$files[$i];
   if (is_dir($file)) {
@@ -152,7 +152,7 @@ for ($i = ($files[0] == ".." ? 1 : 0); $i < count($files); $i++) {
     array_push($entries, new FileEntry($file));
   }
 }
-$total = $files[0] == ".." ? count($files) - 1 : count($files);
+$total = isset($files[0]) && $files[0] == ".." ? count($files) - 1 : count($files);
 
 // usort($entries, function($a, $b) {
 //   return $a->type > $b->type;
@@ -163,7 +163,7 @@ $total = $files[0] == ".." ? count($files) - 1 : count($files);
 // });
 
 
-if ($files[0] == "..") {
+if (isset($files[0]) && $files[0] == "..") {
   array_unshift($entries, new DirectoryEntry(
     $dir . "/" .$files[0]
   ));

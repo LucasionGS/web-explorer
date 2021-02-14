@@ -44,6 +44,6 @@ for ($i=0; $i < $totalCount; $i++) {
 
 echo json_encode([
   "success" => $success,
-  "debug" => json_encode($_POST),
+  "debug" => $_POST,
   "reason" => $success ? null : "Upload failed."
 ]);

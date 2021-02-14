@@ -17,7 +17,17 @@ if (file_exists($rootDir . "/userRoots.php")) {
     foreach ($userRoots as $username => $root) {
       if ($_SERVER["PHP_AUTH_USER"] == $username) {
         $config["files"] .= "/" . trim($root, "/");
-        if (!file_exists($config["files"])) mkdir($config["files"]);
+
+        // TESTING
+        // $pathToTest = "";
+        // echo $pathToTest = "index.php";
+        // echo "<br>" . (file_exists($pathToTest) ? "true" : "false");
+        // echo "<br>" . $pathToTest = $config["files"];
+        // echo "<br>" . (is_dir     ($pathToTest) ? "true" : "false");
+        // echo "<br>" . $pathToTest = $config["files"];
+        // echo "<br>" . (is_writable($pathToTest) ? "true" : "false");
+        
+        if (!file_exists($config["files"])) mkdir($config["files"], 0777, true);
       }
     }
   }

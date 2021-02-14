@@ -122,6 +122,7 @@ body {
   overflow-x: hidden;
   overflow-y: auto;
   word-wrap: break-word;
+  max-height: 100vh;
 }
 
 #filedetails img.previewimage {

@@ -233,8 +233,8 @@ function modalPreviewMedia(fileEntry) {
         const entries = fileEntry.parent.entries.filter(e => e.isFile() && (
         // Filters
         e.isImage() || e.isVideo()));
-        if (!fileEntry.previewImage)
-            fileEntry.setIconToPreview();
+        // if (!fileEntry.previewImage)
+        fileEntry.setIconToPreview();
         let mediaIndex = entries.findIndex(e => e.path == fileEntry.path);
         let div = document.createElement("div");
         let close = document.createElement("button");
@@ -261,7 +261,7 @@ function modalPreviewMedia(fileEntry) {
         let mediaContainer = document.createElement("div");
         if (fileEntry.isImage()) {
             let img = document.createElement("img");
-            img.src = "/" + fileEntry.physicalPath;
+            img.src = fileEntry.view();
             img.classList.add("largepreviewmedia");
             mediaContainer.appendChild(FileSystem.loadingSpinner());
             img.addEventListener("load", () => {
@@ -274,7 +274,7 @@ function modalPreviewMedia(fileEntry) {
             let video = document.createElement("video");
             let source = document.createElement("source");
             video.appendChild(source);
-            source.src = "/" + fileEntry.physicalPath;
+            source.src = fileEntry.view();
             video.classList.add("largepreviewmedia");
             video.controls = true;
             mediaContainer.appendChild(FileSystem.loadingSpinner());
